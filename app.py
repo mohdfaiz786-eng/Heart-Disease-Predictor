@@ -10,6 +10,7 @@ import numpy as np
 import base64
 from datetime import datetime
 from sklearn.preprocessing import LabelEncoder
+from models import ModelTrainer
 
 # Import custom modules
 from database import Database
