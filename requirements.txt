@@ -1,26 +1,26 @@
 # Core Framework
-streamlit==1.28.0
+streamlit
 
 # Data Processing
-pandas==2.0.3
-numpy==1.24.3
+pandas
+numpy
 
 # Machine Learning
-scikit-learn==1.3.0
-joblib==1.3.0
+scikit-learn
+joblib
 
 # Visualization
-plotly==5.17.0
-matplotlib==3.7.2
+plotly
+matplotlib
 
 # PDF Generation
-fpdf==1.7.2
+fpdf
 
 # Database (built-in, no installation needed)
 # sqlite3
 
 # Additional Utilities
-python-dateutil==2.8.2
-pytz==2023.3
+python-dateutil
+pytz
 reportlab
-openpyxl==3.1.2
+openpyxl
