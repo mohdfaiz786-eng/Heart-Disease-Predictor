@@ -110,10 +110,8 @@ class AutoFeatureSelector:
             rf_features = set(self.get_random_forest_features(k))
             rfe_features = set(self.get_rfe_features(k))
             
-            # Combine all features
             all_features = corr_features | mi_features | rf_features | rfe_features
             
-            # Rank features based on frequency
             feature_freq = {}
             for f in all_features:
                 freq = 0
@@ -123,7 +121,6 @@ class AutoFeatureSelector:
                 if f in rfe_features: freq += 1
                 feature_freq[f] = freq
             
-            # Sort by frequency
             selected = sorted(feature_freq.keys(), 
                             key=lambda x: feature_freq[x], 
                             reverse=True)[:k]
