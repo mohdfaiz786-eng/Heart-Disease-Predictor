@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 class ModelTrainer:
     def __init__(self):
@@ -31,7 +31,6 @@ class ModelTrainer:
     
     def train_all(self, X, y, test_size=0.2):
         """Train all models"""
-        # Split data
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             X, y, test_size=test_size, random_state=42, stratify=y
         )
@@ -40,27 +39,22 @@ class ModelTrainer:
         
         for name, model in self.models.items():
             try:
-                # Create pipeline
                 pipeline = Pipeline([
                     ('scaler', StandardScaler()),
                     ('classifier', model)
                 ])
                 
-                # Train
                 start_time = time.time()
                 pipeline.fit(self.X_train, self.y_train)
                 train_time = time.time() - start_time
                 
-                # Predict
                 y_pred = pipeline.predict(self.X_test)
                 
-                # Calculate metrics
                 acc = accuracy_score(self.y_test, y_pred)
                 prec = precision_score(self.y_test, y_pred, average='weighted', zero_division=0)
                 rec = recall_score(self.y_test, y_pred, average='weighted', zero_division=0)
                 f1 = f1_score(self.y_test, y_pred, average='weighted', zero_division=0)
                 
-                # Cross-validation
                 try:
                     cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
                     cv_mean = cv_scores.mean()
@@ -115,11 +109,3 @@ class ModelTrainer:
             proba = model.predict_proba(X) if hasattr(model, 'predict_proba') else None
             return pred, proba
         return None, None
-    
-    def get_confusion_matrix(self, model_name):
-        """Get confusion matrix for model"""
-        if model_name in self.trained_models and self.X_test is not None:
-            model = self.trained_models[model_name]
-            y_pred = model.predict(self.X_test)
-            return confusion_matrix(self.y_test, y_pred)
-        return None
