@@ -24,3 +24,7 @@ python-dateutil
 pytz
 reportlab
 openpyxl
+fastapi
+uvicorn
+requests
+pydantic
