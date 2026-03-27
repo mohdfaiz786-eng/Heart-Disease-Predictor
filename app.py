@@ -28,8 +28,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 # PAGE CONFIG
 # ---------------------------
 st.set_page_config(
-    page_title="CardioAI Pro",
-    page_icon="❤️",
+    page_title="Heart Disease Prediction",
+    page_icon="🫀",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -874,7 +874,7 @@ def login_page():
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.markdown("""
         <div style="text-align: center;">
-            <div style="font-size: 4rem;">❤️</div>
+            <div style="font-size: 4rem;">🫀</div>
             <h1 class="gradient-text">CardioAI Pro</h1>
             <p>Advanced Heart Disease Prediction System</p>
         </div>
