@@ -255,23 +255,59 @@ def load_css():
             .stButton > button {
                 padding: 0.75rem !important;
                 font-size: 1rem !important;
+                min-height: 44px !important;
             }
             
-            /* Hide sidebar on mobile, show bottom nav */
+            /* Make sidebar visible on mobile as slide-out */
             [data-testid="stSidebar"] {
+                position: fixed !important;
+                left: -280px !important;
+                top: 0 !important;
+                height: 100% !important;
+                width: 280px !important;
+                z-index: 1001 !important;
+                transition: left 0.3s ease !important;
+                display: block !important;
+            }
+            
+            /* Show sidebar when open */
+            [data-testid="stSidebar"][aria-expanded="true"] {
+                left: 0 !important;
+            }
+            
+            /* Sidebar collapse button */
+            button[kind="header"] {
+                position: fixed !important;
+                left: 10px !important;
+                top: 10px !important;
+                z-index: 1002 !important;
+                background: #3b82f6 !important;
+                border-radius: 50% !important;
+                width: 40px !important;
+                height: 40px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 0 !important;
+            }
+            
+            button[kind="header"]::before {
+                content: "☰" !important;
+                font-size: 20px !important;
+                color: white !important;
+            }
+            
+            /* Hide bottom nav - not needed now */
+            .bottom-nav {
                 display: none !important;
             }
             
-            .bottom-nav {
-                display: flex !important;
-            }
-            
-            /* Main content padding for bottom nav */
+            /* Main content padding */
             .main .block-container {
-                padding-bottom: 80px !important;
+                padding-top: 60px !important;
+                padding-bottom: 20px !important;
             }
         }
-        
         /* Glass Card */
         .glass-card {
             background: rgba(255, 255, 255, 0.1);
