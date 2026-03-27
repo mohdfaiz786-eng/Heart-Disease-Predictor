@@ -383,23 +383,6 @@ def load_css():
     """
     st.markdown(bottom_nav_html, unsafe_allow_html=True)
 
-
-    # Apply theme from session state
-    theme_css = ""
-    
-    if "theme_bg" in st.session_state and st.session_state.theme_bg:
-        theme_css += f"<style>.stApp{{background:{st.session_state.theme_bg}!important;}}</style>"
-    if "theme_font" in st.session_state and st.session_state.theme_font:
-        theme_css += f"<style>*{{font-family:{st.session_state.theme_font}!important;}}</style>"
-    if "theme_text_color" in st.session_state and st.session_state.theme_text_color:
-        theme_css += f"<style>.stMarkdown,.stText,p,label,div{{color:{st.session_state.theme_text_color}!important;}}</style>"
-    if "theme_heading_color" in st.session_state and st.session_state.theme_heading_color:
-        theme_css += f"<style>h1,h2,h3,h4,.gradient-text{{color:{st.session_state.theme_heading_color}!important;}}.gradient-text{{-webkit-text-fill-color:{st.session_state.theme_heading_color}!important;background:none!important;}}</style>"
-    if "theme_card_bg" in st.session_state and st.session_state.theme_card_bg:
-        theme_css += f"<style>.card{{background:{st.session_state.theme_card_bg}!important;}}</style>"
-    
-    if theme_css:
-        st.markdown(theme_css, unsafe_allow_html=True)
 # ---------------------------
 # ENHANCED RECOMMENDATION SYSTEM
 # ---------------------------
@@ -1352,169 +1335,64 @@ def reports_page():
 # ---------------------------
 # SETTINGS PAGE
 # ---------------------------
+# ---------------------------
+# SETTINGS PAGE - SIMPLIFIED (Only Profile)
+# ---------------------------
 def settings_page():
-    st.markdown('<h1 class="gradient-text">⚙️ Settings</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="gradient-text">👤 Profile Settings</h1>', unsafe_allow_html=True)
     
-    # Tabs
-    tab1, tab2, tab3 = st.tabs(["👤 Profile", "🎨 Theme & Background", "✍️ Font & Color"])
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     
-    # TAB 1: PROFILE
-    with tab1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("👤 Profile Settings")
-        
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            st.markdown("### Profile Picture")
-            if st.session_state.profile_pic:
-                st.image(st.session_state.profile_pic, width=150)
-            else:
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 150px; height: 150px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
-                         border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                        <span style="font-size: 60px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
-                    </div>
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("### Profile Picture")
+        if st.session_state.profile_pic:
+            st.image(st.session_state.profile_pic, width=150)
+        else:
+            st.markdown(f"""
+            <div style="text-align: center;">
+                <div style="width: 150px; height: 150px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <span style="font-size: 60px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
                 </div>
-                """, unsafe_allow_html=True)
-            
-            uploaded_pic = st.file_uploader("Upload Photo", type=['jpg', 'png', 'jpeg'], key="profile_upload")
-            if uploaded_pic:
-                st.session_state.profile_pic = uploaded_pic
-                st.success("✅ Profile picture updated!")
-                st.rerun()
-            
-            if st.button("🗑️ Remove Picture", use_container_width=True):
-                st.session_state.profile_pic = None
-                st.success("✅ Picture removed!")
-                st.rerun()
+            </div>
+            """, unsafe_allow_html=True)
         
-        with col2:
-            st.markdown("### Personal Information")
-            new_name = st.text_input("Display Name", value=st.session_state.profile_name or st.session_state.user)
-            if new_name != st.session_state.profile_name:
-                st.session_state.profile_name = new_name
-            
-            new_bio = st.text_area("Bio", value=st.session_state.profile_bio, height=80)
-            if new_bio != st.session_state.profile_bio:
-                st.session_state.profile_bio = new_bio
-            
-            db = Database()
-            user_data = db.get_user_stats(st.session_state.user)
-            if user_data:
-                st.divider()
-                st.write(f"**📧 Email:** {user_data[1] if len(user_data) > 1 and user_data[1] else 'Not set'}")
-                st.write(f"**🔑 Total Logins:** {user_data[2] if len(user_data) > 2 else '0'}")
-            
-            if st.button("💾 Save Profile", use_container_width=True):
-                st.success("✅ Profile updated!")
-                st.balloons()
+        uploaded_pic = st.file_uploader("Upload Photo", type=['jpg', 'png', 'jpeg'], key="profile_upload")
+        if uploaded_pic:
+            st.session_state.profile_pic = uploaded_pic
+            st.success("✅ Profile picture updated!")
+            st.rerun()
         
-        st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("🗑️ Remove Picture", use_container_width=True):
+            st.session_state.profile_pic = None
+            st.success("✅ Picture removed!")
+            st.rerun()
     
-    # TAB 2: THEME & BACKGROUND
-    with tab2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("🎨 Theme & Background")
+    with col2:
+        st.markdown("### Personal Information")
+        new_name = st.text_input("Display Name", value=st.session_state.profile_name or st.session_state.user)
+        if new_name != st.session_state.profile_name:
+            st.session_state.profile_name = new_name
         
-        # Gradients
-        st.markdown("### Gradient Themes")
-        col1, col2 = st.columns(2)
+        new_bio = st.text_area("Bio", value=st.session_state.profile_bio, height=80, placeholder="Write something about yourself...")
+        if new_bio != st.session_state.profile_bio:
+            st.session_state.profile_bio = new_bio
         
-        gradients = {
-            "Default Dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-            "Ocean Blue": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-            "Sunset Orange": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-            "Forest Green": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-            "Royal Blue": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)"
-        }
+        db = Database()
+        user_data = db.get_user_stats(st.session_state.user)
+        if user_data:
+            st.divider()
+            st.write(f"**📧 Email:** {user_data[1] if len(user_data) > 1 and user_data[1] else 'Not set'}")
+            st.write(f"**🔑 Total Logins:** {user_data[2] if len(user_data) > 2 else '0'}")
+            st.write(f"**📅 Member Since:** {user_data[3][:10] if len(user_data) > 3 and user_data[3] else 'N/A'}")
         
-        for i, (name, grad) in enumerate(gradients.items()):
-            with col1 if i % 2 == 0 else col2:
-                if st.button(f"🎨 {name}", key=f"grad_{i}", use_container_width=True):
-                    st.session_state.theme_bg = grad
-                    st.success(f"✅ {name} theme applied!")
-                    st.rerun()
-        
-        st.markdown("---")
-        
-        # Custom Color
-        st.markdown("### Custom Color")
-        custom_color = st.color_picker("Pick a color", "#0f172a")
-        if st.button("Apply Custom Color", use_container_width=True):
-            st.session_state.theme_bg = custom_color
-            st.success("✅ Custom color applied!")
-            st.rerun()
-        
-        st.markdown("---")
-        
-        # Card Background
-        st.markdown("### Card Background")
-        card_bg = st.color_picker("Card Background Color", "#1e293b")
-        if st.button("Apply Card Color", use_container_width=True):
-            st.session_state.theme_card_bg = card_bg
-            st.success("✅ Card color applied!")
-            st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("💾 Save Profile", use_container_width=True):
+            st.success("✅ Profile updated!")
+            st.balloons()
     
-    # TAB 3: FONT & COLOR
-    with tab3:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("✍️ Font & Color")
-        
-        # Fonts
-        st.markdown("### Font Style")
-        col1, col2 = st.columns(2)
-        
-        fonts = {
-            "Default": "'Inter', sans-serif",
-            "Modern": "'Poppins', 'Inter', sans-serif",
-            "Classic": "'Georgia', 'Times New Roman', serif",
-            "Minimal": "'Helvetica Neue', Arial, sans-serif"
-        }
-        
-        for i, (name, font) in enumerate(fonts.items()):
-            with col1 if i % 2 == 0 else col2:
-                if st.button(f"✍️ {name}", key=f"font_{i}", use_container_width=True):
-                    st.session_state.theme_font = font
-                    st.success(f"✅ {name} font applied!")
-                    st.rerun()
-        
-        st.markdown("---")
-        
-        # Text Colors
-        st.markdown("### Text Colors")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            text_color = st.color_picker("Text Color", "#ffffff")
-            if st.button("Apply Text Color", key="text_btn", use_container_width=True):
-                st.session_state.theme_text_color = text_color
-                st.success("✅ Text color applied!")
-                st.rerun()
-        
-        with col2:
-            heading_color = st.color_picker("Heading Color", "#60a5fa")
-            if st.button("Apply Heading Color", key="heading_btn", use_container_width=True):
-                st.session_state.theme_heading_color = heading_color
-                st.success("✅ Heading color applied!")
-                st.rerun()
-        
-        st.markdown("---")
-        
-        # Reset All
-        if st.button("🔄 Reset All Settings", use_container_width=True):
-            st.session_state.theme_bg = "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-            st.session_state.theme_font = "'Inter', sans-serif"
-            st.session_state.theme_text_color = "#ffffff"
-            st.session_state.theme_heading_color = "#60a5fa"
-            st.session_state.theme_card_bg = "rgba(30, 41, 59, 0.95)"
-            st.success("✅ All settings reset!")
-            st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------
 # API TEST PAGE
