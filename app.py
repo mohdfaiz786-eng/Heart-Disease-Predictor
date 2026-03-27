@@ -258,48 +258,8 @@ def load_css():
                 min-height: 44px !important;
             }
             
-            /* Sidebar - visible as overlay */
-            [data-testid="stSidebar"] {
-                position: fixed !important;
-                top: 0 !important;
-                left: -280px !important;
-                width: 280px !important;
-                height: 100% !important;
-                z-index: 1001 !important;
-                transition: left 0.3s ease !important;
-                background: linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%) !important;
-                display: block !important;
-            }
-            
-            /* When sidebar is open */
-            [data-testid="stSidebar"][aria-expanded="true"] {
-                left: 0 !important;
-            }
-            
-            /* Hamburger menu button */
+            /* Hide default sidebar button */
             button[kind="header"] {
-                position: fixed !important;
-                left: 10px !important;
-                top: 10px !important;
-                z-index: 1002 !important;
-                background: #3b82f6 !important;
-                border-radius: 50% !important;
-                width: 44px !important;
-                height: 44px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border: none !important;
-                cursor: pointer !important;
-            }
-            
-            button[kind="header"]::before {
-                content: "☰" !important;
-                font-size: 24px !important;
-                color: white !important;
-            }
-            
-            button[kind="header"] span {
                 display: none !important;
             }
             
@@ -425,6 +385,56 @@ def load_css():
     """
     st.markdown(bottom_nav_html, unsafe_allow_html=True)
 
+    # Mobile Hamburger Menu Script
+    st.markdown("""
+    <script>
+    // Create hamburger button for mobile
+    if (window.innerWidth <= 768) {
+        const btn = document.createElement('button');
+        btn.innerHTML = '☰';
+        btn.style.position = 'fixed';
+        btn.style.top = '10px';
+        btn.style.left = '10px';
+        btn.style.zIndex = '10000';
+        btn.style.background = '#3b82f6';
+        btn.style.color = 'white';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '50%';
+        btn.style.width = '44px';
+        btn.style.height = '44px';
+        btn.style.fontSize = '24px';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        
+        btn.onclick = function() {
+            const sidebar = document.querySelector('[data-testid="stSidebar"]');
+            if (sidebar) {
+                if (sidebar.style.transform === 'translateX(0px)') {
+                    sidebar.style.transform = 'translateX(-100%)';
+                } else {
+                    sidebar.style.transform = 'translateX(0px)';
+                }
+            }
+        };
+        
+        document.body.appendChild(btn);
+        
+        // Style sidebar for mobile
+        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar) {
+            sidebar.style.position = 'fixed';
+            sidebar.style.top = '0';
+            sidebar.style.left = '0';
+            sidebar.style.height = '100%';
+            sidebar.style.width = '280px';
+            sidebar.style.zIndex = '9999';
+            sidebar.style.transform = 'translateX(-100%)';
+            sidebar.style.transition = 'transform 0.3s ease';
+            sidebar.style.background = 'linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%)';
+        }
+    }
+    </script>
+    """, unsafe_allow_html=True)
 # ---------------------------
 # ENHANCED RECOMMENDATION SYSTEM
 # ---------------------------
