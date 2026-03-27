@@ -1,5 +1,4 @@
-# app.py - CardioAI Pro Final Version
-# Features: Mobile Friendly, Enhanced Recommendations, Professional UI
+# app.py - CardioAI Pro Final (Theme Working)
 
 import streamlit as st
 import pandas as pd
@@ -35,11 +34,13 @@ st.set_page_config(
 )
 
 # ---------------------------
-# CUSTOM CSS - MOBILE FRIENDLY + PROFESSIONAL
+# CUSTOM CSS - MOBILE FRIENDLY + PROFESSIONAL (WITH THEME SUPPORT)
 # ---------------------------
 def load_css():
-    """Load CSS with mobile-first design"""
-    css = """
+    """Load CSS with dynamic theme support"""
+    
+    # Base CSS
+    base_css = """
     <style>
         /* Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -117,14 +118,6 @@ def load_css():
             animation: slideIn 0.5s ease-out;
         }
         
-        .warning-alert {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            padding: 1rem;
-            border-radius: 12px;
-            color: white;
-            text-align: center;
-        }
-        
         /* Buttons */
         .stButton > button {
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
@@ -144,7 +137,7 @@ def load_css():
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
         
-        /* Input Fields - Mobile Friendly */
+        /* Input Fields */
         .stTextInput > div > div > input,
         .stNumberInput > div > div > input {
             border-radius: 12px;
@@ -163,7 +156,7 @@ def load_css():
             outline: none;
         }
         
-        /* Sidebar - Desktop */
+        /* Sidebar */
         [data-testid="stSidebar"] {
             background: linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%);
             min-width: 280px;
@@ -257,7 +250,6 @@ def load_css():
                 font-size: 1rem !important;
             }
             
-            /* Hide sidebar on mobile, show bottom nav */
             [data-testid="stSidebar"] {
                 display: none !important;
             }
@@ -266,7 +258,6 @@ def load_css():
                 display: flex !important;
             }
             
-            /* Main content padding for bottom nav */
             .main .block-container {
                 padding-bottom: 80px !important;
             }
@@ -369,7 +360,73 @@ def load_css():
         }
     </style>
     """
-    st.markdown(css, unsafe_allow_html=True)
+    st.markdown(base_css, unsafe_allow_html=True)
+    
+    # ============ THEME APPLICATION - FIXED ============
+    theme_css = ""
+    
+    # Background
+    if "theme_bg" in st.session_state and st.session_state.theme_bg:
+        bg_value = st.session_state.theme_bg
+        theme_css += f"""
+        <style>
+            .stApp {{
+                background: {bg_value} !important;
+            }}
+        </style>
+        """
+    
+    # Font
+    if "theme_font" in st.session_state and st.session_state.theme_font:
+        font_family = st.session_state.theme_font
+        theme_css += f"""
+        <style>
+            * {{
+                font-family: {font_family} !important;
+            }}
+        </style>
+        """
+    
+    # Text Color
+    if "theme_text_color" in st.session_state and st.session_state.theme_text_color:
+        text_color = st.session_state.theme_text_color
+        theme_css += f"""
+        <style>
+            .stMarkdown, .stText, p, .stTitle, label, div {{
+                color: {text_color} !important;
+            }}
+        </style>
+        """
+    
+    # Heading Color
+    if "theme_heading_color" in st.session_state and st.session_state.theme_heading_color:
+        heading_color = st.session_state.theme_heading_color
+        theme_css += f"""
+        <style>
+            h1, h2, h3, h4, h5, h6, .gradient-text {{
+                color: {heading_color} !important;
+            }}
+            .gradient-text {{
+                -webkit-text-fill-color: {heading_color} !important;
+                background: none !important;
+            }}
+        </style>
+        """
+    
+    # Card Background
+    if "theme_card_bg" in st.session_state and st.session_state.theme_card_bg:
+        card_bg = st.session_state.theme_card_bg
+        theme_css += f"""
+        <style>
+            .card {{
+                background: {card_bg} !important;
+            }}
+        </style>
+        """
+    
+    # Apply theme CSS
+    if theme_css:
+        st.markdown(theme_css, unsafe_allow_html=True)
     
     # Bottom Navigation HTML
     bottom_nav_html = """
@@ -389,124 +446,35 @@ def load_css():
 class RecommendationEngine:
     @staticmethod
     def get_recommendations(risk_percent, age, sex, chol, bp, thalach):
-        """Personalized recommendations based on all factors"""
         recommendations = []
         
-        # General recommendations based on risk
         if risk_percent > 70:
-            recommendations.append({
-                "icon": "🚨",
-                "title": "Immediate Action Required",
-                "desc": "Please consult a cardiologist within 24 hours. This is a high-risk situation.",
-                "priority": "critical"
-            })
+            recommendations.append({"icon": "🚨", "title": "Immediate Action Required", "desc": "Consult a cardiologist within 24 hours.", "priority": "critical"})
         elif risk_percent > 50:
-            recommendations.append({
-                "icon": "⚠️",
-                "title": "High Priority",
-                "desc": "Schedule a doctor's appointment this week for a complete cardiac evaluation.",
-                "priority": "high"
-            })
+            recommendations.append({"icon": "⚠️", "title": "High Priority", "desc": "Schedule doctor's appointment this week.", "priority": "high"})
         elif risk_percent > 30:
-            recommendations.append({
-                "icon": "📋",
-                "title": "Moderate Risk",
-                "desc": "Consider lifestyle changes and schedule a check-up within 3 months.",
-                "priority": "medium"
-            })
+            recommendations.append({"icon": "📋", "title": "Moderate Risk", "desc": "Schedule check-up within 3 months.", "priority": "medium"})
         else:
-            recommendations.append({
-                "icon": "✅",
-                "title": "Low Risk",
-                "desc": "Maintain healthy habits and get annual check-ups.",
-                "priority": "low"
-            })
+            recommendations.append({"icon": "✅", "title": "Low Risk", "desc": "Maintain healthy habits.", "priority": "low"})
         
-        # Age-based recommendations
         if age > 60:
-            recommendations.append({
-                "icon": "👴",
-                "title": "Age Consideration",
-                "desc": "Regular monitoring is recommended due to age. Check blood pressure weekly.",
-                "priority": "high"
-            })
+            recommendations.append({"icon": "👴", "title": "Age Consideration", "desc": "Check blood pressure weekly.", "priority": "high"})
         elif age > 45:
-            recommendations.append({
-                "icon": "👨",
-                "title": "Age Alert",
-                "desc": "Heart health becomes crucial after 45. Annual ECG is recommended.",
-                "priority": "medium"
-            })
+            recommendations.append({"icon": "👨", "title": "Age Alert", "desc": "Annual ECG recommended.", "priority": "medium"})
         
-        # Cholesterol-based recommendations
         if chol > 240:
-            recommendations.append({
-                "icon": "🍔",
-                "title": "High Cholesterol",
-                "desc": "Reduce saturated fats. Eat more oats, nuts, and olive oil. Target: <200 mg/dL",
-                "priority": "high"
-            })
+            recommendations.append({"icon": "🍔", "title": "High Cholesterol", "desc": "Reduce saturated fats. Target: <200 mg/dL", "priority": "high"})
         elif chol > 200:
-            recommendations.append({
-                "icon": "🥗",
-                "title": "Borderline Cholesterol",
-                "desc": "Improve diet with more fiber-rich foods like fruits, vegetables, and whole grains.",
-                "priority": "medium"
-            })
+            recommendations.append({"icon": "🥗", "title": "Borderline Cholesterol", "desc": "Increase fiber-rich foods.", "priority": "medium"})
         
-        # Blood Pressure recommendations
         if bp > 140:
-            recommendations.append({
-                "icon": "💓",
-                "title": "High Blood Pressure",
-                "desc": "Reduce salt intake, limit alcohol, and monitor BP daily. Target: <120/80",
-                "priority": "high"
-            })
+            recommendations.append({"icon": "💓", "title": "High Blood Pressure", "desc": "Reduce salt, monitor BP daily.", "priority": "high"})
         elif bp > 120:
-            recommendations.append({
-                "icon": "🩺",
-                "title": "Elevated BP",
-                "desc": "Start monitoring blood pressure weekly. Reduce stress and salt intake.",
-                "priority": "medium"
-            })
+            recommendations.append({"icon": "🩺", "title": "Elevated BP", "desc": "Monitor BP weekly.", "priority": "medium"})
         
-        # Heart Rate recommendations
-        if thalach < 100:
-            recommendations.append({
-                "icon": "🏃",
-                "title": "Low Heart Rate Reserve",
-                "desc": "Start with light exercise like walking 15 mins/day, gradually increase intensity.",
-                "priority": "medium"
-            })
-        elif thalach < 120:
-            recommendations.append({
-                "icon": "🚶",
-                "title": "Improve Fitness",
-                "desc": "Aim for 150 mins moderate exercise per week. Start with brisk walking.",
-                "priority": "low"
-            })
-        
-        # Lifestyle recommendations (always include)
-        recommendations.append({
-            "icon": "🥦",
-            "title": "Heart-Healthy Diet",
-            "desc": "Mediterranean diet: fish, olive oil, nuts, fruits, vegetables, whole grains.",
-            "priority": "general"
-        })
-        
-        recommendations.append({
-            "icon": "😴",
-            "title": "Sleep Quality",
-            "desc": "Aim for 7-8 hours of quality sleep. Maintain consistent sleep schedule.",
-            "priority": "general"
-        })
-        
-        recommendations.append({
-            "icon": "🧘",
-            "title": "Stress Management",
-            "desc": "Practice meditation, deep breathing, or yoga for 10-15 mins daily.",
-            "priority": "general"
-        })
+        recommendations.append({"icon": "🥦", "title": "Heart-Healthy Diet", "desc": "Mediterranean diet recommended.", "priority": "general"})
+        recommendations.append({"icon": "😴", "title": "Sleep Quality", "desc": "Aim for 7-8 hours of sleep.", "priority": "general"})
+        recommendations.append({"icon": "🧘", "title": "Stress Management", "desc": "Practice meditation or yoga.", "priority": "general"})
         
         return recommendations
 
@@ -514,15 +482,12 @@ class RecommendationEngine:
 # SESSION INIT
 # ---------------------------
 def init_session():
-    # Auth state
     if "auth" not in st.session_state:
         st.session_state.auth = False
     if "user" not in st.session_state:
         st.session_state.user = None
     if "page" not in st.session_state:
         st.session_state.page = "Dashboard"
-    
-    # Data state
     if "df" not in st.session_state:
         st.session_state.df = None
     if "trainer" not in st.session_state:
@@ -559,7 +524,7 @@ def init_session():
         st.session_state.profile_bio = "Heart Health Enthusiast"
 
 # ---------------------------
-# DATABASE CLASS (SAME AS BEFORE)
+# DATABASE CLASS
 # ---------------------------
 class Database:
     def __init__(self):
@@ -652,7 +617,7 @@ class Database:
             conn.close()
 
 # ---------------------------
-# AUTO FEATURE SELECTOR (SAME)
+# AUTO FEATURE SELECTOR
 # ---------------------------
 class AutoFeatureSelector:
     def __init__(self, df, target_col):
@@ -701,7 +666,7 @@ class AutoFeatureSelector:
         return selected
 
 # ---------------------------
-# MODEL TRAINER (SAME)
+# MODEL TRAINER
 # ---------------------------
 class ModelTrainer:
     def __init__(self):
@@ -767,7 +732,7 @@ class ModelTrainer:
         return None, None
 
 # ---------------------------
-# REPORT GENERATOR (SAME)
+# REPORT GENERATOR
 # ---------------------------
 class ReportGenerator:
     def generate_html_report(self, results_df, dataset_info, feature_importance, best_model):
@@ -893,10 +858,7 @@ def dashboard_page():
             st.session_state.page = "Train"
             st.rerun()
     
-    st.info("""
-    **Workflow:**
-    1. Upload Dataset → 2. Feature Selection → 3. Train Models → 4. Predict → 5. Reports
-    """)
+    st.info("Workflow: Upload Dataset → Feature Selection → Train Models → Predict → Reports")
 
 # ---------------------------
 # FEATURE SELECTION PAGE
@@ -1011,29 +973,18 @@ def predict_page():
         inputs = {}
         features = st.session_state.selected_features[:12]
         
-        # Default values for key health metrics
-        default_age = 55
-        default_sex = 1
-        default_chol = 220
-        default_bp = 130
-        default_thalach = 138
+        default_age, default_sex, default_chol, default_bp, default_thalach = 55, 1, 220, 130, 138
         
         for i, feat in enumerate(features):
             with cols[i % 2]:
                 default_val = float(st.session_state.df[feat].median()) if st.session_state.df[feat].dtype in ['int64', 'float64'] else 0.0
                 inputs[feat] = st.number_input(feat.replace("_", " ").title(), value=default_val, step=1.0, format="%.2f")
                 
-                # Capture key metrics for recommendations
-                if 'age' in feat.lower():
-                    default_age = inputs[feat]
-                if 'sex' in feat.lower():
-                    default_sex = inputs[feat]
-                if 'chol' in feat.lower():
-                    default_chol = inputs[feat]
-                if 'trestbps' in feat.lower() or 'bp' in feat.lower():
-                    default_bp = inputs[feat]
-                if 'thalach' in feat.lower():
-                    default_thalach = inputs[feat]
+                if 'age' in feat.lower(): default_age = inputs[feat]
+                if 'sex' in feat.lower(): default_sex = inputs[feat]
+                if 'chol' in feat.lower(): default_chol = inputs[feat]
+                if 'trestbps' in feat.lower(): default_bp = inputs[feat]
+                if 'thalach' in feat.lower(): default_thalach = inputs[feat]
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -1059,11 +1010,9 @@ def predict_page():
                     risk_percent = proba[0][1] * 100 if proba is not None else 0
                     risk_level = "High Risk" if pred[0] == 1 else "Low Risk"
                     
-                    # Save to database
                     db = Database()
                     db.save_prediction(st.session_state.user, risk_level, risk_percent, selected_model, inputs)
                     
-                    # Save to session
                     st.session_state.history.insert(0, {
                         "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "Model": selected_model,
@@ -1072,71 +1021,20 @@ def predict_page():
                         **inputs
                     })
                     
-                    # Display Risk Meter
-                    st.markdown("### Risk Assessment")
                     risk_color = "risk-high" if pred[0] == 1 else "risk-low"
-                    st.markdown(f"""
-                    <div class="risk-meter">
-                        <div class="risk-fill {risk_color}" style="width: {risk_percent}%"></div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f'<div class="risk-meter"><div class="risk-fill {risk_color}" style="width: {risk_percent}%"></div></div>', unsafe_allow_html=True)
                     
-                    # Display Result
                     if pred[0] == 1:
-                        st.markdown(f"""
-                        <div class="error-alert">
-                            <h2>⚠️ High Risk Detected</h2>
-                            <p style="font-size: 24px;"><strong>Risk Probability: {risk_percent:.1f}%</strong></p>
-                            <p>Please consult a healthcare professional immediately!</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f'<div class="error-alert"><h2>⚠️ High Risk</h2><p>Risk: {risk_percent:.1f}%</p><p>Consult a doctor immediately!</p></div>', unsafe_allow_html=True)
                     else:
-                        st.markdown(f"""
-                        <div class="success-alert">
-                            <h2>✅ Low Risk Detected</h2>
-                            <p style="font-size: 24px;"><strong>Health Confidence: {100-risk_percent:.1f}%</strong></p>
-                            <p>Maintain healthy lifestyle habits!</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f'<div class="success-alert"><h2>✅ Low Risk</h2><p>Health: {100-risk_percent:.1f}%</p><p>Keep healthy habits!</p></div>', unsafe_allow_html=True)
                     
-                    # Enhanced Recommendations
                     st.markdown("---")
-                    st.subheader("📋 Personalized Health Recommendations")
+                    st.subheader("📋 Personalized Recommendations")
                     
-                    recommendations = RecommendationEngine.get_recommendations(
-                        risk_percent, default_age, default_sex, default_chol, default_bp, default_thalach
-                    )
-                    
-                    # Show priority recommendations first
-                    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "general": 4}
-                    recommendations.sort(key=lambda x: priority_order.get(x.get("priority", "general"), 5))
-                    
-                    for rec in recommendations[:8]:  # Show top 8 recommendations
-                        st.markdown(f"""
-                        <div class="rec-card">
-                            <div style="display: flex; align-items: center;">
-                                <span class="rec-icon">{rec['icon']}</span>
-                                <div>
-                                    <strong>{rec['title']}</strong><br>
-                                    <small>{rec['desc']}</small>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Quick Actions
-                    st.markdown("---")
-                    st.subheader("📌 Quick Actions")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("📄 Generate Report", use_container_width=True):
-                            st.session_state.page = "Reports"
-                            st.rerun()
-                    with col2:
-                        if st.button("📜 View History", use_container_width=True):
-                            st.session_state.page = "History"
-                            st.rerun()
+                    recs = RecommendationEngine.get_recommendations(risk_percent, default_age, default_sex, default_chol, default_bp, default_thalach)
+                    for rec in recs[:6]:
+                        st.markdown(f'<div class="rec-card"><span style="font-size:1.2rem;">{rec["icon"]}</span> <strong>{rec["title"]}</strong><br><small>{rec["desc"]}</small></div>', unsafe_allow_html=True)
 
 # ---------------------------
 # COMPARISON PAGE
@@ -1176,9 +1074,9 @@ def analytics_page():
             fig = px.pie(df, names=target, title="Target Distribution", hole=0.3)
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            st.metric("Total Samples", len(df))
-            st.metric("Positive Cases", df[target].sum())
-            st.metric("Negative Cases", len(df) - df[target].sum())
+            st.metric("Total", len(df))
+            st.metric("Positive", df[target].sum())
+            st.metric("Negative", len(df) - df[target].sum())
         
         numeric = df.select_dtypes(include=[np.number])
         if len(numeric.columns) > 1:
@@ -1207,7 +1105,6 @@ def history_page():
                 csv = df.to_csv(index=False)
                 b64 = base64.b64encode(csv.encode()).decode()
                 st.markdown(f'<a href="data:file/csv;base64,{b64}" download="history.csv">✅ Download</a>', unsafe_allow_html=True)
-        
         with col2:
             if st.button("🗑️ Clear History", use_container_width=True):
                 st.session_state.history = []
@@ -1225,29 +1122,23 @@ def reports_page():
         has_results = st.session_state.results is not None and isinstance(st.session_state.results, pd.DataFrame) and len(st.session_state.results) > 0
         
         if has_results:
-            st.markdown("""
-            <div style="background: #10b981; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <h3 style="color: white; margin: 0;">✅ Models Trained Successfully!</h3>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div style="background:#10b981;padding:15px;border-radius:12px;margin-bottom:20px;"><h3 style="color:white;">✅ Models Trained Successfully!</h3></div>', unsafe_allow_html=True)
             
             dataset_info = {
-                'samples': len(st.session_state.df) if st.session_state.df is not None else 0,
+                'samples': len(st.session_state.df) if st.session_state.df else 0,
                 'features': len(st.session_state.selected_features) if st.session_state.selected_features else 0,
                 'target': st.session_state.target_col or 'N/A',
-                'positive': 0,
-                'negative': 0
+                'positive': 0, 'negative': 0
             }
             
-            if st.session_state.df is not None and st.session_state.target_col and st.session_state.target_col in st.session_state.df.columns:
+            if st.session_state.df and st.session_state.target_col and st.session_state.target_col in st.session_state.df.columns:
                 try:
                     dataset_info['positive'] = int(st.session_state.df[st.session_state.target_col].sum())
                     dataset_info['negative'] = int(len(st.session_state.df) - dataset_info['positive'])
-                except:
-                    pass
+                except: pass
             
             feature_imp = pd.DataFrame({'Feature': [], 'Importance': []})
-            if st.session_state.feature_importance is not None and isinstance(st.session_state.feature_importance, pd.DataFrame) and len(st.session_state.feature_importance) > 0:
+            if st.session_state.feature_importance is not None and len(st.session_state.feature_importance) > 0:
                 feature_imp = st.session_state.feature_importance
             elif st.session_state.selected_features:
                 weights = [1.0/len(st.session_state.selected_features)] * len(st.session_state.selected_features)
@@ -1256,14 +1147,10 @@ def reports_page():
             best_model = st.session_state.results.iloc[0]["Model"] if len(st.session_state.results) > 0 else "N/A"
             
             col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Samples", dataset_info['samples'])
-            with col2:
-                st.metric("Features", dataset_info['features'])
-            with col3:
-                st.metric("Positive Cases", dataset_info['positive'])
-            with col4:
-                st.metric("Negative Cases", dataset_info['negative'])
+            with col1: st.metric("Total Samples", dataset_info['samples'])
+            with col2: st.metric("Features", dataset_info['features'])
+            with col3: st.metric("Positive Cases", dataset_info['positive'])
+            with col4: st.metric("Negative Cases", dataset_info['negative'])
             
             st.markdown("---")
             
@@ -1271,66 +1158,31 @@ def reports_page():
             with col1:
                 report_type = st.selectbox("Report Format", ["📊 HTML Report", "📈 CSV Report"])
             with col2:
-                if st.button("🚀 Generate Report", use_container_width=True, type="primary"):
-                    with st.spinner("Generating report..."):
+                if st.button("🚀 Generate Report", use_container_width=True):
+                    with st.spinner("Generating..."):
                         try:
                             report_gen = ReportGenerator()
-                            
                             if "HTML" in report_type:
                                 html = report_gen.generate_html_report(st.session_state.results, dataset_info, feature_imp, best_model)
                                 b64 = base64.b64encode(html.encode()).decode()
-                                filename = f"cardioai_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-                                
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 25px; background: #10b981; border-radius: 15px; margin-top: 20px;">
-                                    <a href="data:text/html;base64,{b64}" download="{filename}" 
-                                       style="background: white; color: #10b981; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                        📥 Download HTML Report
-                                    </a>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                st.markdown(f'<div style="text-align:center;"><a href="data:text/html;base64,{b64}" download="report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.html" style="background:#10b981;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;">📥 Download HTML Report</a></div>', unsafe_allow_html=True)
                                 st.success("✅ Report generated!")
-                                st.balloons()
-                                
-                                with st.expander("Preview"):
-                                    st.components.v1.html(html, height=400, scrolling=True)
                             else:
                                 csv_data = report_gen.generate_csv_report(dataset_info, feature_imp, st.session_state.results)
                                 b64 = base64.b64encode(csv_data.encode()).decode()
-                                filename = f"cardioai_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                                
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 25px; background: #3b82f6; border-radius: 15px; margin-top: 20px;">
-                                    <a href="data:file/csv;base64,{b64}" download="{filename}" 
-                                       style="background: white; color: #3b82f6; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                        📥 Download CSV Report
-                                    </a>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                st.markdown(f'<div style="text-align:center;"><a href="data:file/csv;base64,{b64}" download="report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv" style="background:#3b82f6;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;">📥 Download CSV Report</a></div>', unsafe_allow_html=True)
                                 st.success("✅ Report generated!")
                         except Exception as e:
-                            st.error(f"Error: {str(e)}")
+                            st.error(f"Error: {e}")
         else:
-            st.markdown("""
-            <div style="background: #fef3c7; padding: 30px; border-radius: 20px; text-align: center;">
-                <div style="font-size: 3rem;">⚠️</div>
-                <h2>No Models Trained Yet!</h2>
-                <p>Complete the workflow first</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            st.markdown('<div style="background:#fef3c7;padding:30px;border-radius:20px;text-align:center;"><h2>⚠️ No Models Trained Yet!</h2><p>Complete the workflow first</p></div>', unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🔍 Feature Selection"):
-                    st.session_state.page = "Feature"
-                    st.rerun()
+                if st.button("🔍 Feature Selection"): st.session_state.page = "Feature"; st.rerun()
             with col2:
-                if st.button("🤖 Train Models"):
-                    st.session_state.page = "Train"
-                    st.rerun()
-    
+                if st.button("🤖 Train Models"): st.session_state.page = "Train"; st.rerun()
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e}")
 
 # ---------------------------
 # SETTINGS PAGE
@@ -1338,39 +1190,27 @@ def reports_page():
 def settings_page():
     st.markdown('<h1 class="gradient-text">⚙️ Settings</h1>', unsafe_allow_html=True)
     
-    # Tabs
     tab1, tab2, tab3 = st.tabs(["👤 Profile", "🎨 Theme & Background", "✍️ Font & Color"])
     
-    # TAB 1: PROFILE
     with tab1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("👤 Profile Settings")
         
         col1, col2 = st.columns([1, 2])
-        
         with col1:
             st.markdown("### Profile Picture")
             if st.session_state.profile_pic:
                 st.image(st.session_state.profile_pic, width=150)
             else:
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 150px; height: 150px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
-                         border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                        <span style="font-size: 60px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;"><div style="width:150px;height:150px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><span style="font-size:60px;color:white;">{st.session_state.user[0].upper() if st.session_state.user else "👤"}</span></div></div>', unsafe_allow_html=True)
             
-            uploaded_pic = st.file_uploader("Upload Photo", type=['jpg', 'png', 'jpeg'], key="profile_upload")
+            uploaded_pic = st.file_uploader("Upload Photo", type=['jpg','png','jpeg'])
             if uploaded_pic:
                 st.session_state.profile_pic = uploaded_pic
                 st.success("✅ Profile picture updated!")
                 st.rerun()
-            
             if st.button("🗑️ Remove Picture", use_container_width=True):
                 st.session_state.profile_pic = None
-                st.success("✅ Picture removed!")
                 st.rerun()
         
         with col2:
@@ -1378,7 +1218,6 @@ def settings_page():
             new_name = st.text_input("Display Name", value=st.session_state.profile_name or st.session_state.user)
             if new_name != st.session_state.profile_name:
                 st.session_state.profile_name = new_name
-            
             new_bio = st.text_area("Bio", value=st.session_state.profile_bio, height=80)
             if new_bio != st.session_state.profile_bio:
                 st.session_state.profile_bio = new_bio
@@ -1387,24 +1226,19 @@ def settings_page():
             user_data = db.get_user_stats(st.session_state.user)
             if user_data:
                 st.divider()
-                st.write(f"**📧 Email:** {user_data[1] if len(user_data) > 1 and user_data[1] else 'Not set'}")
-                st.write(f"**🔑 Total Logins:** {user_data[2] if len(user_data) > 2 else '0'}")
-            
+                st.write(f"**📧 Email:** {user_data[1] if len(user_data)>1 and user_data[1] else 'Not set'}")
+                st.write(f"**🔑 Total Logins:** {user_data[2] if len(user_data)>2 else '0'}")
             if st.button("💾 Save Profile", use_container_width=True):
                 st.success("✅ Profile updated!")
-                st.balloons()
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # TAB 2: THEME & BACKGROUND
     with tab2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("🎨 Theme & Background")
         
-        # Gradients
         st.markdown("### Gradient Themes")
         col1, col2 = st.columns(2)
-        
         gradients = {
             "Default Dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
             "Ocean Blue": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
@@ -1412,7 +1246,6 @@ def settings_page():
             "Forest Green": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
             "Royal Blue": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)"
         }
-        
         for i, (name, grad) in enumerate(gradients.items()):
             with col1 if i % 2 == 0 else col2:
                 if st.button(f"🎨 {name}", key=f"grad_{i}", use_container_width=True):
@@ -1421,8 +1254,6 @@ def settings_page():
                     st.rerun()
         
         st.markdown("---")
-        
-        # Custom Color
         st.markdown("### Custom Color")
         custom_color = st.color_picker("Pick a color", "#0f172a")
         if st.button("Apply Custom Color", use_container_width=True):
@@ -1431,8 +1262,6 @@ def settings_page():
             st.rerun()
         
         st.markdown("---")
-        
-        # Card Background
         st.markdown("### Card Background")
         card_bg = st.color_picker("Card Background Color", "#1e293b")
         if st.button("Apply Card Color", use_container_width=True):
@@ -1442,22 +1271,18 @@ def settings_page():
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # TAB 3: FONT & COLOR
     with tab3:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("✍️ Font & Color")
         
-        # Fonts
         st.markdown("### Font Style")
         col1, col2 = st.columns(2)
-        
         fonts = {
             "Default": "'Inter', sans-serif",
             "Modern": "'Poppins', 'Inter', sans-serif",
             "Classic": "'Georgia', 'Times New Roman', serif",
             "Minimal": "'Helvetica Neue', Arial, sans-serif"
         }
-        
         for i, (name, font) in enumerate(fonts.items()):
             with col1 if i % 2 == 0 else col2:
                 if st.button(f"✍️ {name}", key=f"font_{i}", use_container_width=True):
@@ -1466,18 +1291,14 @@ def settings_page():
                     st.rerun()
         
         st.markdown("---")
-        
-        # Text Colors
         st.markdown("### Text Colors")
         col1, col2 = st.columns(2)
-        
         with col1:
             text_color = st.color_picker("Text Color", "#ffffff")
             if st.button("Apply Text Color", key="text_btn", use_container_width=True):
                 st.session_state.theme_text_color = text_color
                 st.success("✅ Text color applied!")
                 st.rerun()
-        
         with col2:
             heading_color = st.color_picker("Heading Color", "#60a5fa")
             if st.button("Apply Heading Color", key="heading_btn", use_container_width=True):
@@ -1486,8 +1307,6 @@ def settings_page():
                 st.rerun()
         
         st.markdown("---")
-        
-        # Reset All
         if st.button("🔄 Reset All Settings", use_container_width=True):
             st.session_state.theme_bg = "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
             st.session_state.theme_font = "'Inter', sans-serif"
@@ -1504,44 +1323,9 @@ def settings_page():
 # ---------------------------
 def api_page():
     st.markdown('<h1 class="gradient-text">🔌 API Integration</h1>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="card">
-        <h3>📡 REST API Endpoints</h3>
-        <p>Your model is now available as a REST API. Any application can call it!</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        <div class="card">
-            <h4>📍 API Endpoints</h4>
-            <code>POST /predict</code> - Single prediction<br>
-            <code>POST /predict/batch</code> - Multiple predictions<br>
-            <code>GET /health</code> - Health check<br>
-            <code>GET /model/info</code> - Model info<br>
-            <code>GET /docs</code> - API documentation
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h4>🌐 API URL</h4>
-            <code id="api-url">http://localhost:8000</code>
-            <p style="font-size: 12px; margin-top: 10px;">After deployment, replace with your server URL</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # API Test Section
-    st.subheader("🧪 Test API")
+    st.markdown('<div class="card"><h3>📡 REST API Endpoints</h3><p>Your model is available as a REST API.</p></div>', unsafe_allow_html=True)
     
     api_url = st.text_input("API Base URL", value="http://localhost:8000")
-    
     if st.button("🔌 Check API Health", use_container_width=True):
         try:
             response = requests.get(f"{api_url}/health", timeout=5)
@@ -1551,84 +1335,32 @@ def api_page():
             else:
                 st.error(f"API returned status: {response.status_code}")
         except Exception as e:
-            st.error(f"Cannot connect to API: {str(e)}")
-            st.info("Make sure API server is running: uvicorn api:app --reload --port 8000")
+            st.error(f"Cannot connect to API: {e}")
+            st.info("Run: uvicorn api:app --reload --port 8000")
     
     st.markdown("---")
-    
-    # Code Examples
     st.subheader("💻 Code Examples")
-    
     tabs = st.tabs(["Python", "JavaScript", "cURL"])
-    
     with tabs[0]:
         st.code("""
 import requests
-
-# Single prediction
-response = requests.post(
-    "http://localhost:8000/predict",
-    json={
-        "age": 55,
-        "sex": 1,
-        "trestbps": 130,
-        "chol": 220,
-        "thalach": 138,
-        "oldpeak": 0.6
-    }
-)
-result = response.json()
-print(f"Risk: {result['risk_level']} - {result['risk_percentage']}%")
+response = requests.post("http://localhost:8000/predict", json={
+    "age": 55, "sex": 1, "trestbps": 130, "chol": 220, "thalach": 138
+})
+print(response.json())
         """, language="python")
-    
     with tabs[1]:
         st.code("""
-// JavaScript fetch API
 fetch('http://localhost:8000/predict', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        age: 55,
-        sex: 1,
-        trestbps: 130,
-        chol: 220,
-        thalach: 138,
-        oldpeak: 0.6
-    })
-})
-.then(res => res.json())
-.then(data => console.log(data));
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({age:55,sex:1,trestbps:130,chol:220,thalach:138})
+}).then(res=>res.json()).then(data=>console.log(data));
         """, language="javascript")
-    
     with tabs[2]:
         st.code("""
-# cURL command
-curl -X POST "http://localhost:8000/predict" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "age": 55,
-    "sex": 1,
-    "trestbps": 130,
-    "chol": 220,
-    "thalach": 138,
-    "oldpeak": 0.6
-  }'
+curl -X POST "http://localhost:8000/predict" -H "Content-Type: application/json" -d '{"age":55,"sex":1,"trestbps":130,"chol":220,"thalach":138}'
         """, language="bash")
-    
-    st.markdown("---")
-    
-    # Instructions
-    st.info("""
-    **How to Run API Server:**
-    
-    1. Install requirements: `pip install fastapi uvicorn requests`
-    2. Train model first in Streamlit app
-    3. Open new terminal and run: `uvicorn api:app --reload --port 8000`
-    4. API will be available at: http://localhost:8000
-    5. Interactive docs: http://localhost:8000/docs
-    
-    **Note:** Make sure model is trained before starting API!
-    """)
 
 # ---------------------------
 # MAIN
@@ -1641,37 +1373,18 @@ def main():
         login_page()
         return
     
-    # Desktop Sidebar
     with st.sidebar:
         if st.session_state.profile_pic:
             st.image(st.session_state.profile_pic, width=100)
         else:
-            st.markdown(f"""
-            <div style="text-align: center;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
-                     border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                    <span style="font-size: 35px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
-                </div>
-                <h3 style="margin-top: 10px;">{st.session_state.profile_name or st.session_state.user}</h3>
-                <p style="font-size: 12px;">{st.session_state.profile_bio}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:center;"><div style="width:80px;height:80px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;"><span style="font-size:35px;color:white;">{st.session_state.user[0].upper() if st.session_state.user else "👤"}</span></div><h3>{st.session_state.profile_name or st.session_state.user}</h3><p style="font-size:12px;">{st.session_state.profile_bio}</p></div>', unsafe_allow_html=True)
         
         st.markdown("---")
-        
         pages = {
-            "🏠 Dashboard": "Dashboard",
-            "🔍 Feature Selection": "Feature",
-            "🤖 Train Models": "Train",
-            "❤️ Predict": "Predict",
-            "📈 Comparison": "Comparison",
-            "📊 Analytics": "Analytics",
-            "📜 History": "History",
-            "📄 Reports": "Reports",
-            "🔌 API Test": "API",
-            "⚙️ Settings": "Settings"
+            "🏠 Dashboard": "Dashboard", "🔍 Feature Selection": "Feature", "🤖 Train Models": "Train",
+            "❤️ Predict": "Predict", "📈 Comparison": "Comparison", "📊 Analytics": "Analytics",
+            "📜 History": "History", "📄 Reports": "Reports", "🔌 API Test": "API", "⚙️ Settings": "Settings"
         }
-        
         for display, page in pages.items():
             if st.button(display, use_container_width=True):
                 st.session_state.page = page
@@ -1682,28 +1395,17 @@ def main():
             st.session_state.auth = False
             st.rerun()
     
-    # Page routing
     page = st.session_state.page
-    if page == "Dashboard":
-        dashboard_page()
-    elif page == "Feature":
-        feature_page()
-    elif page == "Train":
-        train_page()
-    elif page == "Predict":
-        predict_page()
-    elif page == "Comparison":
-        comparison_page()
-    elif page == "Analytics":
-        analytics_page()
-    elif page == "History":
-        history_page()
-    elif page == "Reports":
-        reports_page()
-    elif page == "API":
-        api_page()
-    elif page == "Settings":
-        settings_page()
+    if page == "Dashboard": dashboard_page()
+    elif page == "Feature": feature_page()
+    elif page == "Train": train_page()
+    elif page == "Predict": predict_page()
+    elif page == "Comparison": comparison_page()
+    elif page == "Analytics": analytics_page()
+    elif page == "History": history_page()
+    elif page == "Reports": reports_page()
+    elif page == "API": api_page()
+    elif page == "Settings": settings_page()
 
 if __name__ == "__main__":
     main()
