@@ -1,565 +1,143 @@
-# app.py - CardioAI Pro Final Version
-# Features: Mobile Friendly, Enhanced Recommendations, Professional UI
+# app_complete.py - Complete Automatic Feature Selection + 5 Models + Reports
 
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import time
-import os
-import numpy as np
-import base64
-import json
 import sqlite3
 import hashlib
-import requests
-from datetime import datetime
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+import pandas as pd
+import joblib
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report
+from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, RFE
+import time
+import os
+from datetime import datetime
+import numpy as np
+import json
+from io import BytesIO, StringIO
+import base64
+import warnings
+warnings.filterwarnings('ignore')
 
 # ---------------------------
 # PAGE CONFIG
 # ---------------------------
 st.set_page_config(
-    page_title="CardioAI Pro",
+    page_title="CardioAI Pro - Auto Feature Selection",
     page_icon="❤️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ---------------------------
-# CUSTOM CSS - MOBILE FRIENDLY + PROFESSIONAL
+# CUSTOM CSS
 # ---------------------------
-def load_css():
-    """Load CSS with mobile-first design"""
-    css = """
+def get_css():
+    return """
     <style>
-        /* Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Segoe UI', system-ui, sans-serif; }
         
-        * {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .stApp { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            margin-bottom: 1rem;
         }
         
-        /* Base Styles */
-        .stApp {
-            transition: all 0.3s ease;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        }
-        
-        /* Gradient Text */
         .gradient-text {
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
             font-size: 2rem;
-            margin-bottom: 1rem;
         }
         
-        /* Cards */
-        .card {
-            background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.45);
-        }
-        
-        /* Metric Cards */
-        .metric-card {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            border-radius: 15px;
-            padding: 1rem;
-            color: white;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .metric-card:hover {
-            transform: scale(1.05);
-        }
-        
-        /* Alert Boxes */
-        .success-alert {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            padding: 1.5rem;
-            border-radius: 16px;
-            color: white;
-            text-align: center;
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        .error-alert {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            padding: 1.5rem;
-            border-radius: 16px;
-            color: white;
-            text-align: center;
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        .warning-alert {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            padding: 1rem;
-            border-radius: 12px;
-            color: white;
-            text-align: center;
-        }
-        
-        /* Buttons */
         .stButton > button {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 0.75rem 1rem;
+            padding: 0.6rem 1rem;
             font-weight: 600;
             border-radius: 12px;
             transition: all 0.3s ease;
             width: 100%;
-            cursor: pointer;
-            min-height: 48px;
         }
         
         .stButton > button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        /* Input Fields - Mobile Friendly */
-        .stTextInput > div > div > input,
-        .stNumberInput > div > div > input {
-            border-radius: 12px;
-            border: 2px solid #334155;
-            padding: 12px;
-            transition: all 0.3s ease;
-            background: #1e293b;
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 1rem;
             color: white;
-            font-size: 16px;
-        }
-        
-        .stTextInput > div > div > input:focus,
-        .stNumberInput > div > div > input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-            outline: none;
-        }
-        
-        /* Sidebar - Desktop */
-        [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%);
-            min-width: 280px;
-        }
-        
-        [data-testid="stSidebar"] * {
-            color: #e2e8f0;
-        }
-        
-        /* Bottom Navigation - Mobile Only */
-        .bottom-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #0f172a;
-            padding: 12px;
-            z-index: 1000;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-        }
-        
-        .bottom-nav-item {
-            flex: 1;
             text-align: center;
-            padding: 8px;
+        }
+        
+        .success-alert {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 1rem;
             border-radius: 12px;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            color: white;
+            text-align: center;
         }
         
-        .bottom-nav-item:hover {
-            background: rgba(59, 130, 246, 0.2);
+        .error-alert {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            padding: 1rem;
+            border-radius: 12px;
+            color: white;
+            text-align: center;
         }
         
-        /* Animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #1f2937;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            border-radius: 10px;
-        }
-        
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .gradient-text {
-                font-size: 1.5rem !important;
-            }
-            
-            .metric-card {
-                padding: 0.75rem !important;
-                margin: 5px 0 !important;
-            }
-            
-            .metric-card h2 {
-                font-size: 1.2rem !important;
-            }
-            
-            .card {
-                padding: 1rem !important;
-                margin: 10px 0 !important;
-            }
-            
-            .stButton > button {
-                padding: 0.75rem !important;
-                font-size: 1rem !important;
-            }
-            
-            /* Hide sidebar on mobile, show bottom nav */
-            [data-testid="stSidebar"] {
-                display: none !important;
-            }
-            
-            .bottom-nav {
-                display: flex !important;
-            }
-            
-            /* Main content padding for bottom nav */
-            .main .block-container {
-                padding-bottom: 80px !important;
-            }
-        }
-        
-        /* Glass Card */
         .glass-card {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.18);
-            padding: 2rem;
-            animation: fadeInUp 0.6s ease-out;
+            padding: 1.5rem;
         }
         
-        /* Best Model Card */
-        .best-model-card {
+        .best-model {
             border: 2px solid #10b981;
             background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
             border-radius: 15px;
             padding: 1rem;
-            margin: 1rem 0;
-            text-align: center;
-            animation: pulse 2s infinite;
         }
         
-        /* Tabs */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 4px;
-            flex-wrap: wrap;
+        @media (max-width: 768px) {
+            .gradient-text { font-size: 1.5rem !important; }
+            .metric-card { padding: 0.5rem !important; }
         }
         
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 8px;
-            padding: 8px 16px;
-            transition: all 0.3s ease;
-        }
+     
         
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            color: white;
-        }
-        
-        /* Recommendation Cards */
-        .rec-card {
-            background: rgba(59, 130, 246, 0.1);
-            border-left: 4px solid #3b82f6;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-        
-        .rec-card:hover {
-            background: rgba(59, 130, 246, 0.2);
-            transform: translateX(5px);
-        }
-        
-        .rec-icon {
-            font-size: 1.5rem;
-            margin-right: 12px;
-        }
-        
-        /* Risk Meter */
-        .risk-meter {
-            width: 100%;
-            height: 12px;
-            background: #334155;
+        .feature-card {
+            background: rgba(102, 126, 234, 0.1);
             border-radius: 10px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        
-        .risk-fill {
-            height: 100%;
-            border-radius: 10px;
-            transition: width 1s ease;
-        }
-        
-        .risk-high { background: linear-gradient(90deg, #ef4444, #dc2626); }
-        .risk-low { background: linear-gradient(90deg, #10b981, #059669); }
-        
-        /* Loading Animation */
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(59, 130, 246, 0.3);
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            padding: 0.5rem;
+            margin: 0.25rem;
+            display: inline-block;
         }
     </style>
     """
-    st.markdown(css, unsafe_allow_html=True)
-    
-    # Bottom Navigation HTML
-    bottom_nav_html = """
-    <div class="bottom-nav">
-        <div class="bottom-nav-item" onclick="window.location.href='?page=Dashboard'">🏠</div>
-        <div class="bottom-nav-item" onclick="window.location.href='?page=Predict'">❤️</div>
-        <div class="bottom-nav-item" onclick="window.location.href='?page=Analytics'">📊</div>
-        <div class="bottom-nav-item" onclick="window.location.href='?page=History'">📜</div>
-        <div class="bottom-nav-item" onclick="window.location.href='?page=Settings'">⚙️</div>
-    </div>
-    """
-    st.markdown(bottom_nav_html, unsafe_allow_html=True)
 
 # ---------------------------
-# ENHANCED RECOMMENDATION SYSTEM
-# ---------------------------
-class RecommendationEngine:
-    @staticmethod
-    def get_recommendations(risk_percent, age, sex, chol, bp, thalach):
-        """Personalized recommendations based on all factors"""
-        recommendations = []
-        
-        # General recommendations based on risk
-        if risk_percent > 70:
-            recommendations.append({
-                "icon": "🚨",
-                "title": "Immediate Action Required",
-                "desc": "Please consult a cardiologist within 24 hours. This is a high-risk situation.",
-                "priority": "critical"
-            })
-        elif risk_percent > 50:
-            recommendations.append({
-                "icon": "⚠️",
-                "title": "High Priority",
-                "desc": "Schedule a doctor's appointment this week for a complete cardiac evaluation.",
-                "priority": "high"
-            })
-        elif risk_percent > 30:
-            recommendations.append({
-                "icon": "📋",
-                "title": "Moderate Risk",
-                "desc": "Consider lifestyle changes and schedule a check-up within 3 months.",
-                "priority": "medium"
-            })
-        else:
-            recommendations.append({
-                "icon": "✅",
-                "title": "Low Risk",
-                "desc": "Maintain healthy habits and get annual check-ups.",
-                "priority": "low"
-            })
-        
-        # Age-based recommendations
-        if age > 60:
-            recommendations.append({
-                "icon": "👴",
-                "title": "Age Consideration",
-                "desc": "Regular monitoring is recommended due to age. Check blood pressure weekly.",
-                "priority": "high"
-            })
-        elif age > 45:
-            recommendations.append({
-                "icon": "👨",
-                "title": "Age Alert",
-                "desc": "Heart health becomes crucial after 45. Annual ECG is recommended.",
-                "priority": "medium"
-            })
-        
-        # Cholesterol-based recommendations
-        if chol > 240:
-            recommendations.append({
-                "icon": "🍔",
-                "title": "High Cholesterol",
-                "desc": "Reduce saturated fats. Eat more oats, nuts, and olive oil. Target: <200 mg/dL",
-                "priority": "high"
-            })
-        elif chol > 200:
-            recommendations.append({
-                "icon": "🥗",
-                "title": "Borderline Cholesterol",
-                "desc": "Improve diet with more fiber-rich foods like fruits, vegetables, and whole grains.",
-                "priority": "medium"
-            })
-        
-        # Blood Pressure recommendations
-        if bp > 140:
-            recommendations.append({
-                "icon": "💓",
-                "title": "High Blood Pressure",
-                "desc": "Reduce salt intake, limit alcohol, and monitor BP daily. Target: <120/80",
-                "priority": "high"
-            })
-        elif bp > 120:
-            recommendations.append({
-                "icon": "🩺",
-                "title": "Elevated BP",
-                "desc": "Start monitoring blood pressure weekly. Reduce stress and salt intake.",
-                "priority": "medium"
-            })
-        
-        # Heart Rate recommendations
-        if thalach < 100:
-            recommendations.append({
-                "icon": "🏃",
-                "title": "Low Heart Rate Reserve",
-                "desc": "Start with light exercise like walking 15 mins/day, gradually increase intensity.",
-                "priority": "medium"
-            })
-        elif thalach < 120:
-            recommendations.append({
-                "icon": "🚶",
-                "title": "Improve Fitness",
-                "desc": "Aim for 150 mins moderate exercise per week. Start with brisk walking.",
-                "priority": "low"
-            })
-        
-        # Lifestyle recommendations (always include)
-        recommendations.append({
-            "icon": "🥦",
-            "title": "Heart-Healthy Diet",
-            "desc": "Mediterranean diet: fish, olive oil, nuts, fruits, vegetables, whole grains.",
-            "priority": "general"
-        })
-        
-        recommendations.append({
-            "icon": "😴",
-            "title": "Sleep Quality",
-            "desc": "Aim for 7-8 hours of quality sleep. Maintain consistent sleep schedule.",
-            "priority": "general"
-        })
-        
-        recommendations.append({
-            "icon": "🧘",
-            "title": "Stress Management",
-            "desc": "Practice meditation, deep breathing, or yoga for 10-15 mins daily.",
-            "priority": "general"
-        })
-        
-        return recommendations
-
-# ---------------------------
-# SESSION INIT
-# ---------------------------
-def init_session():
-    # Auth state
-    if "auth" not in st.session_state:
-        st.session_state.auth = False
-    if "user" not in st.session_state:
-        st.session_state.user = None
-    if "page" not in st.session_state:
-        st.session_state.page = "Dashboard"
-    
-    # Data state
-    if "df" not in st.session_state:
-        st.session_state.df = None
-    if "trainer" not in st.session_state:
-        st.session_state.trainer = None
-    if "results" not in st.session_state:
-        st.session_state.results = None
-    if "selected_features" not in st.session_state:
-        st.session_state.selected_features = None
-    if "feature_importance" not in st.session_state:
-        st.session_state.feature_importance = None
-    if "target_col" not in st.session_state:
-        st.session_state.target_col = None
-    if "history" not in st.session_state:
-        st.session_state.history = []
-    
-    # Theme settings
-    if "theme_bg" not in st.session_state:
-        st.session_state.theme_bg = "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-    if "theme_font" not in st.session_state:
-        st.session_state.theme_font = "'Inter', sans-serif"
-    if "theme_text_color" not in st.session_state:
-        st.session_state.theme_text_color = "#ffffff"
-    if "theme_heading_color" not in st.session_state:
-        st.session_state.theme_heading_color = "#60a5fa"
-    if "theme_card_bg" not in st.session_state:
-        st.session_state.theme_card_bg = "rgba(30, 41, 59, 0.95)"
-    
-    # Profile settings
-    if "profile_pic" not in st.session_state:
-        st.session_state.profile_pic = None
-    if "profile_name" not in st.session_state:
-        st.session_state.profile_name = None
-    if "profile_bio" not in st.session_state:
-        st.session_state.profile_bio = "Heart Health Enthusiast"
-
-# ---------------------------
-# DATABASE CLASS (SAME AS BEFORE)
+# DATABASE
 # ---------------------------
 class Database:
     def __init__(self):
@@ -569,6 +147,7 @@ class Database:
     def init_db(self):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
+        
         c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -580,6 +159,7 @@ class Database:
             login_count INTEGER DEFAULT 0
         )
         """)
+        
         c.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -588,9 +168,10 @@ class Database:
             risk_level TEXT,
             risk_percentage REAL,
             model_used TEXT,
-            patient_data TEXT
+            data TEXT
         )
         """)
+        
         conn.commit()
         conn.close()
     
@@ -610,7 +191,7 @@ class Database:
         finally:
             conn.close()
     
-    def verify_user(self, username, password):
+    def verify(self, username, password):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
         c.execute("SELECT password FROM users WHERE username=?", (username,))
@@ -628,114 +209,204 @@ class Database:
         conn.commit()
         conn.close()
     
-    def get_user_stats(self, username):
+    def get_user(self, username):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        c.execute("SELECT full_name, email, login_count, created_at FROM users WHERE username=?", (username,))
+        c.execute("SELECT full_name, email, login_count FROM users WHERE username=?", (username,))
         data = c.fetchone()
         conn.close()
         return data
     
-    def save_prediction(self, username, risk_level, risk_percentage, model_used, patient_data):
+    def save_pred(self, username, risk_level, risk_percent, model_used, data):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        try:
-            c.execute(
-                "INSERT INTO predictions (username, risk_level, risk_percentage, model_used, patient_data) VALUES (?,?,?,?,?)",
-                (username, risk_level, risk_percentage, model_used, json.dumps(patient_data))
-            )
-            conn.commit()
-            return True
-        except:
-            return False
-        finally:
-            conn.close()
+        c.execute("INSERT INTO predictions (username, risk_level, risk_percentage, model_used, data) VALUES (?,?,?,?,?)",
+                 (username, risk_level, risk_percent, model_used, json.dumps(data)))
+        conn.commit()
+        conn.close()
 
 # ---------------------------
-# AUTO FEATURE SELECTOR (SAME)
+# AUTO FEATURE SELECTOR
 # ---------------------------
 class AutoFeatureSelector:
     def __init__(self, df, target_col):
         self.df = df
         self.target_col = target_col
+        self.X = None
+        self.y = None
         self.feature_importances = None
         self.selected_features = None
-    
+        
     def prepare_data(self):
+        """Prepare data for feature selection"""
+        # Separate features and target
         X = self.df.drop(columns=[self.target_col])
         y = self.df[self.target_col]
-        for col in X.columns:
-            if X[col].dtype == 'object':
-                X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+        
+        # Handle categorical variables
+        categorical_cols = X.select_dtypes(include=['object']).columns
+        for col in categorical_cols:
+            X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+        
+        # Handle missing values
         X = X.fillna(X.median())
+        
+        self.X = X
+        self.y = y
         return X, y
     
+    def get_correlation_features(self, threshold=0.2):
+        """Get features based on correlation with target"""
+        if self.X is None:
+            self.prepare_data()
+        
+        correlations = []
+        for col in self.X.columns:
+            corr = abs(self.X[col].corr(self.y))
+            correlations.append((col, corr))
+        
+        correlations.sort(key=lambda x: x[1], reverse=True)
+        selected = [col for col, corr in correlations if corr >= threshold]
+        
+        return selected
+    
+    def get_mutual_info_features(self, k=10):
+        """Get features based on mutual information"""
+        from sklearn.feature_selection import mutual_info_classif
+        
+        if self.X is None:
+            self.prepare_data()
+        
+        mi_scores = mutual_info_classif(self.X, self.y, random_state=42)
+        mi_df = pd.DataFrame({
+            'Feature': self.X.columns,
+            'MI_Score': mi_scores
+        }).sort_values('MI_Score', ascending=False)
+        
+        selected = mi_df.head(k)['Feature'].tolist()
+        self.feature_importances = mi_df
+        
+        return selected
+    
+    def get_random_forest_features(self, k=10):
+        """Get features using Random Forest importance"""
+        if self.X is None:
+            self.prepare_data()
+        
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(self.X, self.y)
+        
+        importance_df = pd.DataFrame({
+            'Feature': self.X.columns,
+            'Importance': rf.feature_importances_
+        }).sort_values('Importance', ascending=False)
+        
+        selected = importance_df.head(k)['Feature'].tolist()
+        self.feature_importances = importance_df
+        
+        return selected
+    
+    def get_rfe_features(self, k=10):
+        """Get features using RFE"""
+        if self.X is None:
+            self.prepare_data()
+        
+        estimator = RandomForestClassifier(n_estimators=50, random_state=42)
+        rfe = RFE(estimator, n_features_to_select=k)
+        rfe.fit(self.X, self.y)
+        
+        selected = self.X.columns[rfe.support_].tolist()
+        
+        return selected
+    
     def auto_select_features(self, method='auto', k=10):
-        X, y = self.prepare_data()
-        
+        """Auto select features based on best method"""
         if method == 'correlation':
-            correlations = []
-            for col in X.columns:
-                corr = abs(X[col].corr(y))
-                correlations.append((col, corr))
-            correlations.sort(key=lambda x: x[1], reverse=True)
-            selected = [col for col, corr in correlations[:k]]
-        
+            selected = self.get_correlation_features()
+        elif method == 'mutual_info':
+            selected = self.get_mutual_info_features(k)
         elif method == 'random_forest':
-            rf = RandomForestClassifier(n_estimators=100, random_state=42)
-            rf.fit(X, y)
-            imp_df = pd.DataFrame({'Feature': X.columns, 'Importance': rf.feature_importances_})
-            imp_df = imp_df.sort_values('Importance', ascending=False)
-            selected = imp_df.head(k)['Feature'].tolist()
-            self.feature_importances = imp_df
-        
-        else:
-            rf = RandomForestClassifier(n_estimators=100, random_state=42)
-            rf.fit(X, y)
-            imp_df = pd.DataFrame({'Feature': X.columns, 'Importance': rf.feature_importances_})
-            imp_df = imp_df.sort_values('Importance', ascending=False)
-            selected = imp_df.head(k)['Feature'].tolist()
-            self.feature_importances = imp_df
+            selected = self.get_random_forest_features(k)
+        elif method == 'rfe':
+            selected = self.get_rfe_features(k)
+        else:  # auto - use all methods and combine
+            corr_features = set(self.get_correlation_features(threshold=0.15))
+            mi_features = set(self.get_mutual_info_features(k))
+            rf_features = set(self.get_random_forest_features(k))
+            rfe_features = set(self.get_rfe_features(k))
+            
+            # Combine all features
+            all_features = corr_features | mi_features | rf_features | rfe_features
+            
+            # Rank features based on frequency
+            feature_freq = {}
+            for f in all_features:
+                freq = 0
+                if f in corr_features: freq += 1
+                if f in mi_features: freq += 1
+                if f in rf_features: freq += 1
+                if f in rfe_features: freq += 1
+                feature_freq[f] = freq
+            
+            # Sort by frequency
+            selected = sorted(feature_freq.keys(), key=lambda x: feature_freq[x], reverse=True)[:k]
         
         self.selected_features = selected
         return selected
 
 # ---------------------------
-# MODEL TRAINER (SAME)
+# MODEL TRAINER
 # ---------------------------
 class ModelTrainer:
     def __init__(self):
         self.models = {
-            "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
-            "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+            "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced'),
+            "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced'),
             "Gradient Boosting": GradientBoostingClassifier(n_estimators=100, random_state=42),
-            "Support Vector Machine": SVC(kernel='rbf', probability=True, random_state=42),
+            "Support Vector Machine": SVC(kernel='rbf', probability=True, random_state=42, class_weight='balanced'),
             "Neural Network": MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=500, random_state=42)
         }
+        
         self.results = None
         self.trained_models = {}
+        self.X_train = None
         self.X_test = None
+        self.y_train = None
         self.y_test = None
     
     def train_all(self, X, y, test_size=0.2):
+        """Train all models"""
+        # Split data
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             X, y, test_size=test_size, random_state=42, stratify=y
         )
         
         results = []
+        
         for name, model in self.models.items():
             try:
+                # Create pipeline
                 pipeline = Pipeline([
                     ('scaler', StandardScaler()),
                     ('classifier', model)
                 ])
+                
+                # Train
+                start_time = time.time()
                 pipeline.fit(self.X_train, self.y_train)
+                train_time = time.time() - start_time
+                
+                # Predict
                 y_pred = pipeline.predict(self.X_test)
                 
+                # Calculate metrics
                 acc = accuracy_score(self.y_test, y_pred)
                 prec = precision_score(self.y_test, y_pred, average='weighted', zero_division=0)
                 rec = recall_score(self.y_test, y_pred, average='weighted', zero_division=0)
                 f1 = f1_score(self.y_test, y_pred, average='weighted', zero_division=0)
+                
+                # Cross-validation score
+                cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
                 
                 results.append({
                     "Model": name,
@@ -743,22 +414,42 @@ class ModelTrainer:
                     "Accuracy_Score": acc,
                     "Precision": f"{prec:.4f}",
                     "Recall": f"{rec:.4f}",
-                    "F1-Score": f"{f1:.4f}"
+                    "F1-Score": f"{f1:.4f}",
+                    "CV Score": f"{cv_scores.mean():.4f}",
+                    "Training Time": f"{train_time:.2f}s",
+                    "Model Object": pipeline
                 })
+                
                 self.trained_models[name] = pipeline
+                
             except Exception as e:
-                results.append({"Model": name, "Accuracy": "Error", "Accuracy_Score": 0, "Precision": "Error", "Recall": "Error", "F1-Score": "Error"})
+                st.error(f"Error training {name}: {str(e)}")
+                results.append({
+                    "Model": name,
+                    "Accuracy": "Error",
+                    "Accuracy_Score": 0,
+                    "Precision": "Error",
+                    "Recall": "Error",
+                    "F1-Score": "Error",
+                    "CV Score": "Error",
+                    "Training Time": "Error",
+                    "Model Object": None
+                })
         
         self.results = pd.DataFrame(results)
         self.results = self.results.sort_values('Accuracy_Score', ascending=False)
+        
         return self.results
     
     def get_best_model(self):
+        """Get best model"""
         if len(self.results) > 0:
-            return self.results.iloc[0]["Model"], self.trained_models.get(self.results.iloc[0]["Model"])
+            best_row = self.results.iloc[0]
+            return best_row["Model"], self.trained_models.get(best_row["Model"])
         return None, None
     
     def predict(self, model_name, X):
+        """Make prediction"""
         if model_name in self.trained_models:
             model = self.trained_models[model_name]
             pred = model.predict(X)
@@ -767,64 +458,139 @@ class ModelTrainer:
         return None, None
 
 # ---------------------------
-# REPORT GENERATOR (SAME)
+# REPORT GENERATOR
 # ---------------------------
 class ReportGenerator:
-    def generate_html_report(self, results_df, dataset_info, feature_importance, best_model):
-        results_html = results_df.to_html(index=False) if results_df is not None else "<p>No results</p>"
-        
+    def __init__(self):
+        pass
+    
+    def generate_html_report(self, results_df, dataset_info, feature_importance, best_model, predictions):
+        """Generate HTML report"""
         html = f"""
         <!DOCTYPE html>
         <html>
-        <head><title>CardioAI Report</title>
-        <style>
-            body {{ font-family: Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; }}
-            .container {{ max-width: 1200px; margin: auto; background: white; border-radius: 20px; padding: 30px; }}
-            h1 {{ color: #667eea; text-align: center; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-            th {{ background: #667eea; color: white; padding: 12px; }}
-            td {{ border: 1px solid #ddd; padding: 10px; }}
-            .best {{ background: #10b981; color: white; padding: 15px; border-radius: 10px; text-align: center; }}
-        </style>
+        <head>
+            <title>CardioAI Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
+                .container {{ max-width: 1200px; margin: auto; background: white; border-radius: 20px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }}
+                h1 {{ color: #667eea; text-align: center; }}
+                h2 {{ color: #764ba2; border-bottom: 2px solid #667eea; padding-bottom: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+                th {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }}
+                .metric {{ display: inline-block; padding: 10px; margin: 10px; background: #f0f0f0; border-radius: 10px; }}
+                .best {{ background: #10b981; color: white; padding: 5px 10px; border-radius: 5px; }}
+                .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; }}
+            </style>
         </head>
         <body>
-        <div class="container">
-            <h1>❤️ CardioAI Report</h1>
-            <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <h2>Dataset Info</h2>
-            <p>Samples: {dataset_info.get('samples', 0)} | Features: {dataset_info.get('features', 0)} | Target: {dataset_info.get('target', 'N/A')}</p>
-            <h2>Model Results</h2>
-            {results_html}
-            <div class="best"><h3>🏆 Best Model: {best_model}</h3></div>
-        </div>
+            <div class="container">
+                <h1>❤️ CardioAI - Heart Disease Prediction Report</h1>
+                <p style="text-align: center;">Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                
+                <h2>📊 Dataset Information</h2>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Total Samples</td><td>{dataset_info.get('samples', 'N/A')}</td></tr>
+                    <tr><td>Total Features</td><td>{dataset_info.get('features', 'N/A')}</td></tr>
+                    <tr><td>Target Column</td><td>{dataset_info.get('target', 'N/A')}</td></tr>
+                    <tr><td>Positive Cases</td><td>{dataset_info.get('positive', 'N/A')}</td></tr>
+                    <tr><td>Negative Cases</td><td>{dataset_info.get('negative', 'N/A')}</td></tr>
+                </table>
+                
+                <h2>🤖 Model Performance Comparison</h2>
+                {results_df.to_html(index=False)}
+                
+                <h2>🏆 Best Model</h2>
+                <div class="best">
+                    <strong>{best_model}</strong> - Highest Accuracy
+                </div>
+                
+                <h2>📈 Feature Importance (Top 10)</h2>
+                {feature_importance.head(10).to_html(index=False)}
+                
+                <h2>💊 Recommendations</h2>
+                <ul>
+                    <li>Regular exercise (30 minutes daily)</li>
+                    <li>Healthy diet with low saturated fats</li>
+                    <li>Regular medical check-ups</li>
+                    <li>Stress management techniques</li>
+                    <li>Adequate sleep (7-8 hours)</li>
+                </ul>
+                
+                <div class="footer">
+                    <p>This report is generated by CardioAI Pro - Advanced Heart Disease Prediction System</p>
+                    <p>For medical advice, please consult a healthcare professional.</p>
+                </div>
+            </div>
         </body>
         </html>
         """
         return html
     
-    def generate_csv_report(self, dataset_info, feature_importance, results_df):
-        import io
-        output = io.StringIO()
-        output.write(f"CardioAI Report,{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        output.write(f"Total Samples,{dataset_info.get('samples', 0)}\n")
-        output.write(f"Features,{dataset_info.get('features', 0)}\n")
-        output.write(f"Target,{dataset_info.get('target', 'N/A')}\n\n")
-        if results_df is not None:
-            results_df.to_csv(output, index=False)
-        return output.getvalue()
+    def generate_pdf_report(self, results_df, dataset_info, feature_importance, best_model, predictions):
+        """Generate PDF report using reportlab"""
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import A4
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4)
+            story = []
+            styles = getSampleStyleSheet()
+            
+            # Title
+            title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#667eea'))
+            story.append(Paragraph("CardioAI - Heart Disease Prediction Report", title_style))
+            story.append(Spacer(1, 20))
+            
+            # Date
+            story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            # Dataset Info
+            story.append(Paragraph("Dataset Information", styles['Heading2']))
+            data = [
+                ["Total Samples", str(dataset_info.get('samples', 'N/A'))],
+                ["Total Features", str(dataset_info.get('features', 'N/A'))],
+                ["Target Column", dataset_info.get('target', 'N/A')],
+                ["Positive Cases", str(dataset_info.get('positive', 'N/A'))],
+                ["Negative Cases", str(dataset_info.get('negative', 'N/A'))]
+            ]
+            table = Table(data, colWidths=[2*inch, 3*inch])
+            table.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.lightgrey)]))
+            story.append(table)
+            story.append(Spacer(1, 20))
+            
+            # Best Model
+            story.append(Paragraph(f"Best Model: {best_model}", styles['Heading2']))
+            
+            doc.build(story)
+            buffer.seek(0)
+            return buffer
+        except:
+            return None
 
 # ---------------------------
 # LOGIN PAGE
 # ---------------------------
 def login_page():
+    st.markdown(get_css(), unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col2:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        
         st.markdown("""
         <div style="text-align: center;">
-            <div style="font-size: 4rem;">❤️</div>
+            <div style="font-size: 3rem;">❤️</div>
             <h1 class="gradient-text">CardioAI Pro</h1>
-            <p>Advanced Heart Disease Prediction System</p>
+            <p>Auto Feature Selection | 5 Models | Smart Predictions</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -832,843 +598,97 @@ def login_page():
         db = Database()
         
         with tab1:
-            with st.form("login_form"):
+            with st.form("login"):
                 username = st.text_input("Username")
                 password = st.text_input("Password", type="password")
-                if st.form_submit_button("Login", use_container_width=True):
-                    if db.verify_user(username, password):
-                        st.session_state.auth = True
-                        st.session_state.user = username
-                        st.session_state.profile_name = username
-                        st.success("Login successful!")
-                        time.sleep(1)
-                        st.rerun()
+                submit = st.form_submit_button("Login", use_container_width=True)
+                
+                if submit:
+                    if username and password:
+                        if db.verify(username, password):
+                            st.session_state.auth = True
+                            st.session_state.user = username
+                            st.success("✅ Login successful!")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Invalid credentials")
                     else:
-                        st.error("Invalid credentials")
+                        st.warning("⚠️ Please fill all fields")
         
         with tab2:
-            with st.form("signup_form"):
-                full_name = st.text_input("Full Name")
+            with st.form("signup"):
+                full = st.text_input("Full Name")
                 email = st.text_input("Email")
-                username = st.text_input("Username")
-                password = st.text_input("Password", type="password")
+                user = st.text_input("Username")
+                pwd = st.text_input("Password", type="password")
                 confirm = st.text_input("Confirm Password", type="password")
-                if st.form_submit_button("Sign Up", use_container_width=True):
-                    if all([full_name, email, username, password, confirm]) and password == confirm and len(password) >= 6:
-                        if db.add_user(username, password, email, full_name):
-                            st.success("Account created! Please login.")
-                        else:
-                            st.error("Username exists")
-                    else:
-                        st.warning("Fill all fields correctly")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------------------------
-# DASHBOARD PAGE
-# ---------------------------
-def dashboard_page():
-    st.markdown('<h1 class="gradient-text">Dashboard</h1>', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown('<div class="metric-card"><h2>5</h2><p>ML Models</p></div>', unsafe_allow_html=True)
-    with col2:
-        status = "✅" if st.session_state.trainer else "❌"
-        st.markdown(f'<div class="metric-card"><h2>{status}</h2><p>Models Trained</p></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown(f'<div class="metric-card"><h2>{len(st.session_state.history)}</h2><p>Predictions</p></div>', unsafe_allow_html=True)
-    with col4:
-        features = len(st.session_state.selected_features) if st.session_state.selected_features else 0
-        st.markdown(f'<div class="metric-card"><h2>{features}</h2><p>Features</p></div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔍 Feature Selection", use_container_width=True):
-            st.session_state.page = "Feature"
-            st.rerun()
-    with col2:
-        if st.button("🚀 Train Models", use_container_width=True):
-            st.session_state.page = "Train"
-            st.rerun()
-    
-    st.info("""
-    **Workflow:**
-    1. Upload Dataset → 2. Feature Selection → 3. Train Models → 4. Predict → 5. Reports
-    """)
-
-# ---------------------------
-# FEATURE SELECTION PAGE
-# ---------------------------
-def feature_page():
-    st.markdown('<h1 class="gradient-text">Auto Feature Selection</h1>', unsafe_allow_html=True)
-    
-    with st.expander("📁 Upload Dataset", expanded=st.session_state.df is None):
-        uploaded = st.file_uploader("Choose CSV", type=["csv"])
-        if uploaded:
-            df = pd.read_csv(uploaded)
-            st.session_state.df = df
-            st.success(f"✅ Loaded: {df.shape[0]} rows, {df.shape[1]} columns")
-            st.dataframe(df.head(), use_container_width=True)
-            
-            possible_targets = [col for col in df.columns if any(w in col.lower() for w in ['heart', 'disease', 'target', 'class'])]
-            mode = st.radio("Target Selection", ["Auto Detect", "Manual Select"])
-            target = possible_targets[0] if mode == "Auto Detect" and possible_targets else st.selectbox("Select Target", df.columns)
-            st.session_state.target_col = target
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(df[target].value_counts())
-            with col2:
-                st.plotly_chart(px.pie(df, names=target, title="Class Distribution"), use_container_width=True)
-            
-            method = st.selectbox("Method", ["Auto", "Random Forest", "Correlation"])
-            k = st.slider("Number of Features", 3, min(20, len(df.columns)-1), 10)
-            
-            if st.button("🚀 Run Selection", use_container_width=True):
-                with st.spinner("Selecting..."):
-                    selector = AutoFeatureSelector(df, target)
-                    selected = selector.auto_select_features(method.lower().replace(" ", "_"), k)
-                    st.session_state.selected_features = selected
-                    st.session_state.feature_importance = selector.feature_importances
-                    st.success(f"✅ Selected {len(selected)} features")
-                    
-                    cols = st.columns(4)
-                    for i, feat in enumerate(selected):
-                        with cols[i % 4]:
-                            st.markdown(f"✅ {feat}")
-                    
-                    if selector.feature_importances is not None:
-                        fig = px.bar(selector.feature_importances.head(15), x="Importance", y="Feature", orientation='h')
-                        st.plotly_chart(fig, use_container_width=True)
-
-# ---------------------------
-# TRAIN MODELS PAGE
-# ---------------------------
-def train_page():
-    st.markdown('<h1 class="gradient-text">Train 5 Models</h1>', unsafe_allow_html=True)
-    
-    if st.session_state.df is None:
-        st.warning("Upload dataset first!")
-        if st.button("Go to Upload"):
-            st.session_state.page = "Feature"
-            st.rerun()
-    elif st.session_state.selected_features is None:
-        st.warning("Run feature selection first!")
-        if st.button("Go to Feature Selection"):
-            st.session_state.page = "Feature"
-            st.rerun()
-    else:
-        st.success(f"Dataset: {st.session_state.df.shape[0]} rows | Features: {len(st.session_state.selected_features)}")
-        
-        test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-        
-        if st.button("🚀 Train All Models", use_container_width=True):
-            with st.spinner("Training..."):
-                X = st.session_state.df[st.session_state.selected_features].copy()
-                y = st.session_state.df[st.session_state.target_col].copy()
+                submit = st.form_submit_button("Sign Up", use_container_width=True)
                 
-                for col in X.columns:
-                    if X[col].dtype == 'object':
-                        X[col] = LabelEncoder().fit_transform(X[col].astype(str))
-                X = X.fillna(X.median())
-                
-                trainer = ModelTrainer()
-                results = trainer.train_all(X, y, test_size)
-                
-                st.session_state.trainer = trainer
-                st.session_state.results = results
-                
-                st.success("✅ All models trained!")
-                st.balloons()
-                
-                display_df = results.drop(columns=['Accuracy_Score'])
-                st.dataframe(display_df, use_container_width=True)
-                
-                best = results.iloc[0]["Model"]
-                st.markdown(f'<div class="best-model-card"><h3>🏆 Best: {best}</h3></div>', unsafe_allow_html=True)
-
-# ---------------------------
-# PREDICT PAGE WITH ENHANCED RECOMMENDATIONS
-# ---------------------------
-def predict_page():
-    st.markdown('<h1 class="gradient-text">Heart Disease Prediction</h1>', unsafe_allow_html=True)
-    
-    if st.session_state.trainer is None:
-        st.warning("Train models first!")
-        if st.button("Go to Training"):
-            st.session_state.page = "Train"
-            st.rerun()
-    else:
-        best_name, _ = st.session_state.trainer.get_best_model()
-        st.success(f"🎯 Best Model: {best_name}")
-        
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Patient Information")
-        
-        cols = st.columns(2)
-        inputs = {}
-        features = st.session_state.selected_features[:12]
-        
-        # Default values for key health metrics
-        default_age = 55
-        default_sex = 1
-        default_chol = 220
-        default_bp = 130
-        default_thalach = 138
-        
-        for i, feat in enumerate(features):
-            with cols[i % 2]:
-                default_val = float(st.session_state.df[feat].median()) if st.session_state.df[feat].dtype in ['int64', 'float64'] else 0.0
-                inputs[feat] = st.number_input(feat.replace("_", " ").title(), value=default_val, step=1.0, format="%.2f")
-                
-                # Capture key metrics for recommendations
-                if 'age' in feat.lower():
-                    default_age = inputs[feat]
-                if 'sex' in feat.lower():
-                    default_sex = inputs[feat]
-                if 'chol' in feat.lower():
-                    default_chol = inputs[feat]
-                if 'trestbps' in feat.lower() or 'bp' in feat.lower():
-                    default_bp = inputs[feat]
-                if 'thalach' in feat.lower():
-                    default_thalach = inputs[feat]
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        model_options = list(st.session_state.trainer.models.keys())
-        selected_model = st.selectbox("Select Model", model_options, index=model_options.index(best_name))
-        
-        if st.button("🔍 Analyze Risk", use_container_width=True):
-            with st.spinner("Analyzing patient data..."):
-                df_input = pd.DataFrame([inputs])
-                for feat in features:
-                    if feat not in df_input.columns:
-                        df_input[feat] = 0
-                df_input = df_input[features]
-                
-                for col in df_input.columns:
-                    if df_input[col].dtype == 'object':
-                        df_input[col] = LabelEncoder().fit_transform(df_input[col].astype(str))
-                df_input = df_input.fillna(0)
-                
-                pred, proba = st.session_state.trainer.predict(selected_model, df_input)
-                
-                if pred is not None:
-                    risk_percent = proba[0][1] * 100 if proba is not None else 0
-                    risk_level = "High Risk" if pred[0] == 1 else "Low Risk"
-                    
-                    # Save to database
-                    db = Database()
-                    db.save_prediction(st.session_state.user, risk_level, risk_percent, selected_model, inputs)
-                    
-                    # Save to session
-                    st.session_state.history.insert(0, {
-                        "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Model": selected_model,
-                        "Risk": risk_level,
-                        "Probability": f"{risk_percent:.1f}%",
-                        **inputs
-                    })
-                    
-                    # Display Risk Meter
-                    st.markdown("### Risk Assessment")
-                    risk_color = "risk-high" if pred[0] == 1 else "risk-low"
-                    st.markdown(f"""
-                    <div class="risk-meter">
-                        <div class="risk-fill {risk_color}" style="width: {risk_percent}%"></div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Display Result
-                    if pred[0] == 1:
-                        st.markdown(f"""
-                        <div class="error-alert">
-                            <h2>⚠️ High Risk Detected</h2>
-                            <p style="font-size: 24px;"><strong>Risk Probability: {risk_percent:.1f}%</strong></p>
-                            <p>Please consult a healthcare professional immediately!</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div class="success-alert">
-                            <h2>✅ Low Risk Detected</h2>
-                            <p style="font-size: 24px;"><strong>Health Confidence: {100-risk_percent:.1f}%</strong></p>
-                            <p>Maintain healthy lifestyle habits!</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Enhanced Recommendations
-                    st.markdown("---")
-                    st.subheader("📋 Personalized Health Recommendations")
-                    
-                    recommendations = RecommendationEngine.get_recommendations(
-                        risk_percent, default_age, default_sex, default_chol, default_bp, default_thalach
-                    )
-                    
-                    # Show priority recommendations first
-                    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "general": 4}
-                    recommendations.sort(key=lambda x: priority_order.get(x.get("priority", "general"), 5))
-                    
-                    for rec in recommendations[:8]:  # Show top 8 recommendations
-                        st.markdown(f"""
-                        <div class="rec-card">
-                            <div style="display: flex; align-items: center;">
-                                <span class="rec-icon">{rec['icon']}</span>
-                                <div>
-                                    <strong>{rec['title']}</strong><br>
-                                    <small>{rec['desc']}</small>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Quick Actions
-                    st.markdown("---")
-                    st.subheader("📌 Quick Actions")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("📄 Generate Report", use_container_width=True):
-                            st.session_state.page = "Reports"
-                            st.rerun()
-                    with col2:
-                        if st.button("📜 View History", use_container_width=True):
-                            st.session_state.page = "History"
-                            st.rerun()
-
-# ---------------------------
-# COMPARISON PAGE
-# ---------------------------
-def comparison_page():
-    st.markdown('<h1 class="gradient-text">Model Comparison</h1>', unsafe_allow_html=True)
-    
-    if st.session_state.results is not None:
-        display_df = st.session_state.results.drop(columns=['Accuracy_Score'])
-        st.dataframe(display_df, use_container_width=True)
-        
-        best = st.session_state.results.iloc[0]["Model"]
-        st.markdown(f'<div class="best-model-card"><h3>🏆 Best: {best}</h3></div>', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.bar(st.session_state.results, x="Model", y="Accuracy_Score", title="Accuracy Comparison", color="Model")
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = px.line(st.session_state.results, x="Model", y="Accuracy_Score", title="Accuracy Trend", markers=True)
-            st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No models trained yet!")
-
-# ---------------------------
-# ANALYTICS PAGE
-# ---------------------------
-def analytics_page():
-    st.markdown('<h1 class="gradient-text">Analytics Dashboard</h1>', unsafe_allow_html=True)
-    
-    if st.session_state.df is not None and st.session_state.target_col:
-        df = st.session_state.df
-        target = st.session_state.target_col
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.pie(df, names=target, title="Target Distribution", hole=0.3)
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            st.metric("Total Samples", len(df))
-            st.metric("Positive Cases", df[target].sum())
-            st.metric("Negative Cases", len(df) - df[target].sum())
-        
-        numeric = df.select_dtypes(include=[np.number])
-        if len(numeric.columns) > 1:
-            st.subheader("Correlation Matrix")
-            fig = px.imshow(numeric.corr(), text_auto=True, color_continuous_scale="RdBu")
-            st.plotly_chart(fig, use_container_width=True)
-        
-        st.subheader("Summary Statistics")
-        st.dataframe(df.describe(), use_container_width=True)
-    else:
-        st.info("No dataset loaded. Upload first!")
-
-# ---------------------------
-# HISTORY PAGE
-# ---------------------------
-def history_page():
-    st.markdown('<h1 class="gradient-text">Prediction History</h1>', unsafe_allow_html=True)
-    
-    if st.session_state.history:
-        df = pd.DataFrame(st.session_state.history)
-        st.dataframe(df, use_container_width=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📥 Export CSV", use_container_width=True):
-                csv = df.to_csv(index=False)
-                b64 = base64.b64encode(csv.encode()).decode()
-                st.markdown(f'<a href="data:file/csv;base64,{b64}" download="history.csv">✅ Download</a>', unsafe_allow_html=True)
-        
-        with col2:
-            if st.button("🗑️ Clear History", use_container_width=True):
-                st.session_state.history = []
-                st.rerun()
-    else:
-        st.info("No predictions yet!")
-
-# ---------------------------
-# REPORTS PAGE
-# ---------------------------
-def reports_page():
-    st.markdown('<h1 class="gradient-text">📄 Generate Reports</h1>', unsafe_allow_html=True)
-    
-    try:
-        has_results = st.session_state.results is not None and isinstance(st.session_state.results, pd.DataFrame) and len(st.session_state.results) > 0
-        
-        if has_results:
-            st.markdown("""
-            <div style="background: #10b981; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <h3 style="color: white; margin: 0;">✅ Models Trained Successfully!</h3>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            dataset_info = {
-                'samples': len(st.session_state.df) if st.session_state.df is not None else 0,
-                'features': len(st.session_state.selected_features) if st.session_state.selected_features else 0,
-                'target': st.session_state.target_col or 'N/A',
-                'positive': 0,
-                'negative': 0
-            }
-            
-            if st.session_state.df is not None and st.session_state.target_col and st.session_state.target_col in st.session_state.df.columns:
-                try:
-                    dataset_info['positive'] = int(st.session_state.df[st.session_state.target_col].sum())
-                    dataset_info['negative'] = int(len(st.session_state.df) - dataset_info['positive'])
-                except:
-                    pass
-            
-            feature_imp = pd.DataFrame({'Feature': [], 'Importance': []})
-            if st.session_state.feature_importance is not None and isinstance(st.session_state.feature_importance, pd.DataFrame) and len(st.session_state.feature_importance) > 0:
-                feature_imp = st.session_state.feature_importance
-            elif st.session_state.selected_features:
-                weights = [1.0/len(st.session_state.selected_features)] * len(st.session_state.selected_features)
-                feature_imp = pd.DataFrame({'Feature': st.session_state.selected_features, 'Importance': weights}).sort_values('Importance', ascending=False)
-            
-            best_model = st.session_state.results.iloc[0]["Model"] if len(st.session_state.results) > 0 else "N/A"
-            
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Samples", dataset_info['samples'])
-            with col2:
-                st.metric("Features", dataset_info['features'])
-            with col3:
-                st.metric("Positive Cases", dataset_info['positive'])
-            with col4:
-                st.metric("Negative Cases", dataset_info['negative'])
-            
-            st.markdown("---")
-            
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                report_type = st.selectbox("Report Format", ["📊 HTML Report", "📈 CSV Report"])
-            with col2:
-                if st.button("🚀 Generate Report", use_container_width=True, type="primary"):
-                    with st.spinner("Generating report..."):
-                        try:
-                            report_gen = ReportGenerator()
-                            
-                            if "HTML" in report_type:
-                                html = report_gen.generate_html_report(st.session_state.results, dataset_info, feature_imp, best_model)
-                                b64 = base64.b64encode(html.encode()).decode()
-                                filename = f"cardioai_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-                                
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 25px; background: #10b981; border-radius: 15px; margin-top: 20px;">
-                                    <a href="data:text/html;base64,{b64}" download="{filename}" 
-                                       style="background: white; color: #10b981; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                        📥 Download HTML Report
-                                    </a>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                st.success("✅ Report generated!")
-                                st.balloons()
-                                
-                                with st.expander("Preview"):
-                                    st.components.v1.html(html, height=400, scrolling=True)
+                if submit:
+                    if all([full, email, user, pwd, confirm]):
+                        if len(pwd) >= 6:
+                            if pwd == confirm:
+                                if db.add_user(user, pwd, email, full):
+                                    st.success("✅ Account created! Please login.")
+                                    st.balloons()
+                                else:
+                                    st.error("❌ Username already exists")
                             else:
-                                csv_data = report_gen.generate_csv_report(dataset_info, feature_imp, st.session_state.results)
-                                b64 = base64.b64encode(csv_data.encode()).decode()
-                                filename = f"cardioai_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                                
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 25px; background: #3b82f6; border-radius: 15px; margin-top: 20px;">
-                                    <a href="data:file/csv;base64,{b64}" download="{filename}" 
-                                       style="background: white; color: #3b82f6; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                                        📥 Download CSV Report
-                                    </a>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                st.success("✅ Report generated!")
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
-        else:
-            st.markdown("""
-            <div style="background: #fef3c7; padding: 30px; border-radius: 20px; text-align: center;">
-                <div style="font-size: 3rem;">⚠️</div>
-                <h2>No Models Trained Yet!</h2>
-                <p>Complete the workflow first</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🔍 Feature Selection"):
-                    st.session_state.page = "Feature"
-                    st.rerun()
-            with col2:
-                if st.button("🤖 Train Models"):
-                    st.session_state.page = "Train"
-                    st.rerun()
-    
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-
-# ---------------------------
-# SETTINGS PAGE
-# ---------------------------
-def settings_page():
-    st.markdown('<h1 class="gradient-text">⚙️ Settings</h1>', unsafe_allow_html=True)
-    
-    # Tabs
-    tab1, tab2, tab3 = st.tabs(["👤 Profile", "🎨 Theme & Background", "✍️ Font & Color"])
-    
-    # TAB 1: PROFILE
-    with tab1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("👤 Profile Settings")
-        
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            st.markdown("### Profile Picture")
-            if st.session_state.profile_pic:
-                st.image(st.session_state.profile_pic, width=150)
-            else:
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="width: 150px; height: 150px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
-                         border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                        <span style="font-size: 60px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            uploaded_pic = st.file_uploader("Upload Photo", type=['jpg', 'png', 'jpeg'], key="profile_upload")
-            if uploaded_pic:
-                st.session_state.profile_pic = uploaded_pic
-                st.success("✅ Profile picture updated!")
-                st.rerun()
-            
-            if st.button("🗑️ Remove Picture", use_container_width=True):
-                st.session_state.profile_pic = None
-                st.success("✅ Picture removed!")
-                st.rerun()
-        
-        with col2:
-            st.markdown("### Personal Information")
-            new_name = st.text_input("Display Name", value=st.session_state.profile_name or st.session_state.user)
-            if new_name != st.session_state.profile_name:
-                st.session_state.profile_name = new_name
-            
-            new_bio = st.text_area("Bio", value=st.session_state.profile_bio, height=80)
-            if new_bio != st.session_state.profile_bio:
-                st.session_state.profile_bio = new_bio
-            
-            db = Database()
-            user_data = db.get_user_stats(st.session_state.user)
-            if user_data:
-                st.divider()
-                st.write(f"**📧 Email:** {user_data[1] if len(user_data) > 1 and user_data[1] else 'Not set'}")
-                st.write(f"**🔑 Total Logins:** {user_data[2] if len(user_data) > 2 else '0'}")
-            
-            if st.button("💾 Save Profile", use_container_width=True):
-                st.success("✅ Profile updated!")
-                st.balloons()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # TAB 2: THEME & BACKGROUND
-    with tab2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("🎨 Theme & Background")
-        
-        # Gradients
-        st.markdown("### Gradient Themes")
-        col1, col2 = st.columns(2)
-        
-        gradients = {
-            "Default Dark": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-            "Ocean Blue": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-            "Sunset Orange": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-            "Forest Green": "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-            "Royal Blue": "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)"
-        }
-        
-        for i, (name, grad) in enumerate(gradients.items()):
-            with col1 if i % 2 == 0 else col2:
-                if st.button(f"🎨 {name}", key=f"grad_{i}", use_container_width=True):
-                    st.session_state.theme_bg = grad
-                    st.success(f"✅ {name} theme applied!")
-                    st.rerun()
-        
-        st.markdown("---")
-        
-        # Custom Color
-        st.markdown("### Custom Color")
-        custom_color = st.color_picker("Pick a color", "#0f172a")
-        if st.button("Apply Custom Color", use_container_width=True):
-            st.session_state.theme_bg = custom_color
-            st.success("✅ Custom color applied!")
-            st.rerun()
-        
-        st.markdown("---")
-        
-        # Card Background
-        st.markdown("### Card Background")
-        card_bg = st.color_picker("Card Background Color", "#1e293b")
-        if st.button("Apply Card Color", use_container_width=True):
-            st.session_state.theme_card_bg = card_bg
-            st.success("✅ Card color applied!")
-            st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # TAB 3: FONT & COLOR
-    with tab3:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("✍️ Font & Color")
-        
-        # Fonts
-        st.markdown("### Font Style")
-        col1, col2 = st.columns(2)
-        
-        fonts = {
-            "Default": "'Inter', sans-serif",
-            "Modern": "'Poppins', 'Inter', sans-serif",
-            "Classic": "'Georgia', 'Times New Roman', serif",
-            "Minimal": "'Helvetica Neue', Arial, sans-serif"
-        }
-        
-        for i, (name, font) in enumerate(fonts.items()):
-            with col1 if i % 2 == 0 else col2:
-                if st.button(f"✍️ {name}", key=f"font_{i}", use_container_width=True):
-                    st.session_state.theme_font = font
-                    st.success(f"✅ {name} font applied!")
-                    st.rerun()
-        
-        st.markdown("---")
-        
-        # Text Colors
-        st.markdown("### Text Colors")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            text_color = st.color_picker("Text Color", "#ffffff")
-            if st.button("Apply Text Color", key="text_btn", use_container_width=True):
-                st.session_state.theme_text_color = text_color
-                st.success("✅ Text color applied!")
-                st.rerun()
-        
-        with col2:
-            heading_color = st.color_picker("Heading Color", "#60a5fa")
-            if st.button("Apply Heading Color", key="heading_btn", use_container_width=True):
-                st.session_state.theme_heading_color = heading_color
-                st.success("✅ Heading color applied!")
-                st.rerun()
-        
-        st.markdown("---")
-        
-        # Reset All
-        if st.button("🔄 Reset All Settings", use_container_width=True):
-            st.session_state.theme_bg = "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-            st.session_state.theme_font = "'Inter', sans-serif"
-            st.session_state.theme_text_color = "#ffffff"
-            st.session_state.theme_heading_color = "#60a5fa"
-            st.session_state.theme_card_bg = "rgba(30, 41, 59, 0.95)"
-            st.success("✅ All settings reset!")
-            st.rerun()
+                                st.error("❌ Passwords don't match")
+                        else:
+                            st.warning("⚠️ Password must be at least 6 characters")
+                    else:
+                        st.warning("⚠️ Please fill all fields")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------
-# API TEST PAGE
+# MAIN APP
 # ---------------------------
-def api_page():
-    st.markdown('<h1 class="gradient-text">🔌 API Integration</h1>', unsafe_allow_html=True)
+def main_app():
+    st.markdown(get_css(), unsafe_allow_html=True)
     
-    st.markdown("""
-    <div class="card">
-        <h3>📡 REST API Endpoints</h3>
-        <p>Your model is now available as a REST API. Any application can call it!</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Session state
+    if "page" not in st.session_state:
+        st.session_state.page = "Dashboard"
+    if "df" not in st.session_state:
+        st.session_state.df = None
+    if "trainer" not in st.session_state:
+        st.session_state.trainer = None
+    if "results" not in st.session_state:
+        st.session_state.results = None
+    if "selected_features" not in st.session_state:
+        st.session_state.selected_features = None
+    if "feature_importance" not in st.session_state:
+        st.session_state.feature_importance = None
+    if "target_col" not in st.session_state:
+        st.session_state.target_col = None
     
-    col1, col2 = st.columns(2)
+    db = Database()
+    user_data = db.get_user(st.session_state.user)
     
-    with col1:
-        st.markdown("""
-        <div class="card">
-            <h4>📍 API Endpoints</h4>
-            <code>POST /predict</code> - Single prediction<br>
-            <code>POST /predict/batch</code> - Multiple predictions<br>
-            <code>GET /health</code> - Health check<br>
-            <code>GET /model/info</code> - Model info<br>
-            <code>GET /docs</code> - API documentation
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h4>🌐 API URL</h4>
-            <code id="api-url">http://localhost:8000</code>
-            <p style="font-size: 12px; margin-top: 10px;">After deployment, replace with your server URL</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # API Test Section
-    st.subheader("🧪 Test API")
-    
-    api_url = st.text_input("API Base URL", value="http://localhost:8000")
-    
-    if st.button("🔌 Check API Health", use_container_width=True):
-        try:
-            response = requests.get(f"{api_url}/health", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                st.success(f"✅ API is healthy! Model loaded: {data.get('model_loaded', False)}")
-            else:
-                st.error(f"API returned status: {response.status_code}")
-        except Exception as e:
-            st.error(f"Cannot connect to API: {str(e)}")
-            st.info("Make sure API server is running: uvicorn api:app --reload --port 8000")
-    
-    st.markdown("---")
-    
-    # Code Examples
-    st.subheader("💻 Code Examples")
-    
-    tabs = st.tabs(["Python", "JavaScript", "cURL"])
-    
-    with tabs[0]:
-        st.code("""
-import requests
-
-# Single prediction
-response = requests.post(
-    "http://localhost:8000/predict",
-    json={
-        "age": 55,
-        "sex": 1,
-        "trestbps": 130,
-        "chol": 220,
-        "thalach": 138,
-        "oldpeak": 0.6
-    }
-)
-result = response.json()
-print(f"Risk: {result['risk_level']} - {result['risk_percentage']}%")
-        """, language="python")
-    
-    with tabs[1]:
-        st.code("""
-// JavaScript fetch API
-fetch('http://localhost:8000/predict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        age: 55,
-        sex: 1,
-        trestbps: 130,
-        chol: 220,
-        thalach: 138,
-        oldpeak: 0.6
-    })
-})
-.then(res => res.json())
-.then(data => console.log(data));
-        """, language="javascript")
-    
-    with tabs[2]:
-        st.code("""
-# cURL command
-curl -X POST "http://localhost:8000/predict" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "age": 55,
-    "sex": 1,
-    "trestbps": 130,
-    "chol": 220,
-    "thalach": 138,
-    "oldpeak": 0.6
-  }'
-        """, language="bash")
-    
-    st.markdown("---")
-    
-    # Instructions
-    st.info("""
-    **How to Run API Server:**
-    
-    1. Install requirements: `pip install fastapi uvicorn requests`
-    2. Train model first in Streamlit app
-    3. Open new terminal and run: `uvicorn api:app --reload --port 8000`
-    4. API will be available at: http://localhost:8000
-    5. Interactive docs: http://localhost:8000/docs
-    
-    **Note:** Make sure model is trained before starting API!
-    """)
-
-# ---------------------------
-# MAIN
-# ---------------------------
-def main():
-    load_css()
-    init_session()
-    
-    if not st.session_state.auth:
-        login_page()
-        return
-    
-    # Desktop Sidebar
+    # Sidebar
     with st.sidebar:
-        if st.session_state.profile_pic:
-            st.image(st.session_state.profile_pic, width=100)
-        else:
-            st.markdown(f"""
-            <div style="text-align: center;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); 
-                     border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                    <span style="font-size: 35px; color: white;">{st.session_state.user[0].upper() if st.session_state.user else '👤'}</span>
-                </div>
-                <h3 style="margin-top: 10px;">{st.session_state.profile_name or st.session_state.user}</h3>
-                <p style="font-size: 12px;">{st.session_state.profile_bio}</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <div style="font-size: 2rem;">👤</div>
+            <h3>{st.session_state.user}</h3>
+            <p>{user_data[0] if user_data else 'User'}</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
         pages = {
             "🏠 Dashboard": "Dashboard",
-            "🔍 Feature Selection": "Feature",
+            "📊 Auto Feature Selection": "Feature",
             "🤖 Train Models": "Train",
             "❤️ Predict": "Predict",
-            "📈 Comparison": "Comparison",
+            "📈 Model Comparison": "Comparison",
             "📊 Analytics": "Analytics",
             "📜 History": "History",
             "📄 Reports": "Reports",
-            "🔌 API Test": "API",
             "⚙️ Settings": "Settings"
         }
         
@@ -1678,33 +698,602 @@ def main():
                 st.rerun()
         
         st.markdown("---")
+        
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.auth = False
             st.rerun()
     
     # Page routing
     page = st.session_state.page
+    
     if page == "Dashboard":
-        dashboard_page()
+        st.markdown('<h1 class="gradient-text">Dashboard</h1>', unsafe_allow_html=True)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown("""
+            <div class="metric-card">
+                <h2>5</h2>
+                <p>ML Models</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            status = "✅" if st.session_state.trainer else "❌"
+            st.markdown(f"""
+            <div class="metric-card">
+                <h2>{status}</h2>
+                <p>Models Trained</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <h2>{len(st.session_state.get('history', []))}</h2>
+                <p>Predictions</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            features_count = len(st.session_state.selected_features) if st.session_state.selected_features else 0
+            st.markdown(f"""
+            <div class="metric-card">
+                <h2>{features_count}</h2>
+                <p>Features Selected</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔍 Auto Select Features", use_container_width=True):
+                st.session_state.page = "Feature"
+                st.rerun()
+        with col2:
+            if st.button("🚀 Train Models", use_container_width=True):
+                st.session_state.page = "Train"
+                st.rerun()
+        
+        st.markdown("---")
+        
+        st.info("""
+        **CardioAI Pro - Advanced Heart Disease Prediction System**
+        
+        **Workflow:**
+        1. 📁 **Upload Dataset** - Upload CSV file with heart disease data
+        2. 🔍 **Auto Feature Selection** - Automatically select best features
+        3. 🤖 **Train 5 Models** - Train all models simultaneously
+        4. ❤️ **Make Predictions** - Get instant risk assessment
+        5. 📄 **Generate Reports** - Download professional reports
+        
+        **Features:**
+        - Automatic target column detection
+        - Multiple feature selection methods
+        - 5 ML models comparison
+        - Real-time predictions
+        - PDF & HTML reports
+        - Mobile responsive design
+        """)
+    
     elif page == "Feature":
-        feature_page()
+        st.markdown('<h1 class="gradient-text">Auto Feature Selection</h1>', unsafe_allow_html=True)
+        
+        # Dataset upload
+        with st.expander("📁 Upload Dataset", expanded=st.session_state.df is None):
+            uploaded = st.file_uploader("Choose CSV Dataset", type=["csv"])
+            
+            if uploaded:
+                df = pd.read_csv(uploaded)
+                st.session_state.df = df
+                st.success(f"✅ Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+                st.dataframe(df.head(), use_container_width=True)
+                
+                # Automatic target column detection
+                st.subheader("🎯 Target Column Detection")
+                
+                possible_targets = []
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if any(word in col_lower for word in ['heart', 'disease', 'target', 'class', 'label', 'hd']):
+                        possible_targets.append(col)
+                
+                if possible_targets:
+                    st.info(f"🔍 Detected possible target columns: {', '.join(possible_targets)}")
+                    
+                    # Manual or automatic selection
+                    selection_mode = st.radio("Select Target Column Mode:", ["Auto Detect", "Manual Select"])
+                    
+                    if selection_mode == "Auto Detect":
+                        target_col = possible_targets[0]
+                        st.success(f"✅ Auto selected: **{target_col}**")
+                    else:
+                        target_col = st.selectbox("Select Target Column", df.columns.tolist())
+                    
+                    st.session_state.target_col = target_col
+                    
+                    # Show target distribution
+                    st.subheader("Target Distribution")
+                    target_counts = df[target_col].value_counts()
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(target_counts)
+                    with col2:
+                        fig = px.pie(values=target_counts.values, names=target_counts.index, title="Class Distribution")
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Feature selection method
+                    st.subheader("🔧 Feature Selection Method")
+                    
+                    method = st.selectbox(
+                        "Select Method",
+                        ["Auto (Combine All)", "Correlation", "Mutual Information", "Random Forest Importance", "RFE"]
+                    )
+                    
+                    k_features = st.slider("Number of Features to Select", 3, min(20, len(df.columns)-1), 10)
+                    
+                    if st.button("🚀 Run Feature Selection", use_container_width=True):
+                        with st.spinner("Analyzing features..."):
+                            selector = AutoFeatureSelector(df, target_col)
+                            selector.prepare_data()
+                            
+                            method_map = {
+                                "Auto (Combine All)": "auto",
+                                "Correlation": "correlation",
+                                "Mutual Information": "mutual_info",
+                                "Random Forest Importance": "random_forest",
+                                "RFE": "rfe"
+                            }
+                            
+                            selected = selector.auto_select_features(method_map[method], k_features)
+                            st.session_state.selected_features = selected
+                            st.session_state.feature_importance = selector.feature_importances
+                            
+                            st.success(f"✅ Selected {len(selected)} features")
+                            
+                            # Display selected features
+                            st.subheader("📋 Selected Features")
+                            cols = st.columns(4)
+                            for i, feat in enumerate(selected):
+                                with cols[i % 4]:
+                                    st.markdown(f"✅ {feat}")
+                            
+                            # Feature importance chart
+                            if selector.feature_importances is not None:
+                                st.subheader("📊 Feature Importance")
+                                fig = px.bar(selector.feature_importances.head(15), 
+                                           x="Importance" if "Importance" in selector.feature_importances.columns else "MI_Score",
+                                           y="Feature", orientation='h',
+                                           title="Top 15 Features by Importance")
+                                st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("⚠️ No target column detected! Please manually select one.")
+                    target_col = st.selectbox("Select Target Column", df.columns.tolist())
+                    st.session_state.target_col = target_col
+    
     elif page == "Train":
-        train_page()
+        st.markdown('<h1 class="gradient-text">Train 5 Models</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.df is None:
+            st.warning("⚠️ Please upload a dataset first!")
+            if st.button("📁 Go to Upload", use_container_width=True):
+                st.session_state.page = "Feature"
+                st.rerun()
+        elif st.session_state.selected_features is None:
+            st.warning("⚠️ Please run feature selection first!")
+            if st.button("🔍 Go to Feature Selection", use_container_width=True):
+                st.session_state.page = "Feature"
+                st.rerun()
+        else:
+            st.success(f"✅ Dataset: {st.session_state.df.shape[0]} rows")
+            st.success(f"✅ Selected Features: {len(st.session_state.selected_features)}")
+            st.success(f"✅ Target Column: {st.session_state.target_col}")
+            
+            # Display selected features
+            st.subheader("Features to Use")
+            cols = st.columns(5)
+            for i, feat in enumerate(st.session_state.selected_features):
+                with cols[i % 5]:
+                    st.markdown(f"✅ {feat}")
+            
+            # Training options
+            test_size = st.slider("Test Set Size", 0.1, 0.4, 0.2, 0.05)
+            
+            if st.button("🚀 Train All 5 Models", use_container_width=True):
+                with st.spinner("Training models... This may take a moment..."):
+                    # Prepare data
+                    df = st.session_state.df
+                    target = st.session_state.target_col
+                    features = st.session_state.selected_features
+                    
+                    X = df[features].copy()
+                    y = df[target].copy()
+                    
+                    # Handle categorical features
+                    for col in X.columns:
+                        if X[col].dtype == 'object':
+                            X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+                    
+                    # Handle missing values
+                    X = X.fillna(X.median())
+                    
+                    # Train models
+                    trainer = ModelTrainer()
+                    results = trainer.train_all(X, y, test_size)
+                    
+                    st.session_state.trainer = trainer
+                    st.session_state.results = results
+                    
+                    st.success("✅ All 5 models trained successfully!")
+                    st.balloons()
+                    
+                    # Display results
+                    st.subheader("📊 Training Results")
+                    display_df = results.drop(columns=['Model Object', 'Accuracy_Score'])
+                    st.dataframe(display_df, use_container_width=True)
+                    
+                    # Best model
+                    best_model = results.iloc[0]["Model"]
+                    best_acc = results.iloc[0]["Accuracy"]
+                    st.markdown(f"""
+                    <div class="best-model">
+                        <h3>🏆 Best Model: {best_model}</h3>
+                        <p>Accuracy: {best_acc}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
     elif page == "Predict":
-        predict_page()
+        st.markdown('<h1 class="gradient-text">Heart Disease Prediction</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.trainer is None:
+            st.warning("⚠️ No models trained! Please train models first.")
+            if st.button("🚀 Go to Training", use_container_width=True):
+                st.session_state.page = "Train"
+                st.rerun()
+        elif st.session_state.selected_features is None:
+            st.warning("⚠️ No features selected! Please run feature selection first.")
+            if st.button("🔍 Go to Feature Selection", use_container_width=True):
+                st.session_state.page = "Feature"
+                st.rerun()
+        else:
+            # Get best model
+            best_name, best_model = st.session_state.trainer.get_best_model()
+            st.success(f"🎯 Using Best Model: **{best_name}**")
+            
+            # Input form
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Patient Information")
+            
+            # Create input fields for selected features
+            cols = st.columns(2)
+            inputs = {}
+            
+            # Get sample data for defaults
+            df = st.session_state.df
+            features = st.session_state.selected_features
+            
+            for i, feat in enumerate(features[:12]):  # Limit to 12 features for better UI
+                with cols[i % 2]:
+                    default_val = float(df[feat].median()) if df[feat].dtype in ['int64', 'float64'] else 0
+                    inputs[feat] = st.number_input(
+                        feat.replace("_", " ").title(),
+                        value=default_val,
+                        format="%.2f"
+                    )
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Model selection for prediction
+            model_options = list(st.session_state.trainer.models.keys())
+            selected_model = st.selectbox("Select Model for Prediction", model_options, index=model_options.index(best_name))
+            
+            if st.button("🔍 Analyze Risk", use_container_width=True):
+                with st.spinner(f"Analyzing with {selected_model}..."):
+                    # Prepare input
+                    df_input = pd.DataFrame([inputs])
+                    
+                    # Ensure all features exist
+                    for feat in features:
+                        if feat not in df_input.columns:
+                            df_input[feat] = 0
+                    
+                    df_input = df_input[features]
+                    
+                    # Handle categorical
+                    for col in df_input.columns:
+                        if df_input[col].dtype == 'object':
+                            df_input[col] = LabelEncoder().fit_transform(df_input[col].astype(str))
+                    
+                    df_input = df_input.fillna(0)
+                    
+                    # Predict
+                    pred, proba = st.session_state.trainer.predict(selected_model, df_input)
+                    
+                    if pred is not None:
+                        risk_percent = proba[0][1] * 100 if proba is not None else 0
+                        risk_level = "High Risk" if pred[0] == 1 else "Low Risk"
+                        
+                        # Save to database
+                        db.save_pred(st.session_state.user, risk_level, risk_percent, selected_model, inputs)
+                        
+                        # Save to session
+                        if "history" not in st.session_state:
+                            st.session_state.history = []
+                        
+                        st.session_state.history.insert(0, {
+                            "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "Model": selected_model,
+                            "Risk": risk_level,
+                            "Probability": f"{risk_percent:.1f}%",
+                            **inputs
+                        })
+                        
+                        # Display result
+                        if pred[0] == 1:
+                            st.markdown(f"""
+                            <div class="error-alert">
+                                <h2>⚠️ {risk_level}</h2>
+                                <p style="font-size: 20px;">Risk Probability: {risk_percent:.1f}%</p>
+                                <p>Model: {selected_model}</p>
+                                <p>Please consult a healthcare professional immediately!</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                            <div class="success-alert">
+                                <h2>✅ {risk_level}</h2>
+                                <p style="font-size: 20px;">Health Probability: {100-risk_percent:.1f}%</p>
+                                <p>Model: {selected_model}</p>
+                                <p>Keep up healthy habits!</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        # Recommendations
+                        with st.expander("📋 Detailed Recommendations"):
+                            if pred[0] == 1:
+                                st.markdown("""
+                                ### 🏥 Medical Recommendations
+                                - **Immediate Actions:** Schedule a cardiologist appointment
+                                - **Lifestyle Changes:** 
+                                    - 30 minutes of moderate exercise daily
+                                    - Reduce salt and saturated fat intake
+                                    - Quit smoking if applicable
+                                - **Monitoring:** Check blood pressure weekly
+                                - **Medication:** Take prescribed medicines regularly
+                                """)
+                            else:
+                                st.markdown("""
+                                ### 💪 Preventive Recommendations
+                                - **Exercise:** 150 minutes of moderate activity per week
+                                - **Diet:** Mediterranean diet rich in fruits, vegetables, whole grains
+                                - **Sleep:** 7-8 hours of quality sleep
+                                - **Stress Management:** Practice meditation or yoga
+                                - **Regular Checkups:** Annual health screening
+                                """)
+    
     elif page == "Comparison":
-        comparison_page()
+        st.markdown('<h1 class="gradient-text">Model Comparison</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.results is not None:
+            results_df = st.session_state.results.copy()
+            display_df = results_df.drop(columns=['Model Object', 'Accuracy_Score'])
+            st.dataframe(display_df, use_container_width=True)
+            
+            # Best model highlight
+            best_model = results_df.iloc[0]["Model"]
+            best_acc = results_df.iloc[0]["Accuracy"]
+            st.markdown(f"""
+            <div class="best-model">
+                <h3>🏆 Best Performing Model: {best_model}</h3>
+                <p>Accuracy: {best_acc} | F1-Score: {results_df.iloc[0]['F1-Score']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Visualizations
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig = px.bar(results_df, x="Model", y="Accuracy_Score", 
+                           title="Model Accuracy Comparison",
+                           color="Model", text="Accuracy")
+                fig.update_traces(texttemplate='%{text:.2%}', textposition='outside')
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                metrics = results_df.melt(id_vars=["Model"], 
+                                         value_vars=["Accuracy_Score", "Precision", "Recall", "F1-Score"],
+                                         var_name="Metric", value_name="Score")
+                metrics['Score'] = pd.to_numeric(metrics['Score'], errors='coerce')
+                metrics = metrics.dropna()
+                
+                fig = px.line_polar(metrics, r="Score", theta="Metric", 
+                                   color="Model", line_close=True,
+                                   title="Model Performance Radar")
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Confusion matrices
+            if st.session_state.trainer and hasattr(st.session_state.trainer, 'X_test'):
+                st.subheader("Confusion Matrices")
+                cols = st.columns(3)
+                model_list = list(st.session_state.trainer.models.keys())
+                
+                for idx, model_name in enumerate(model_list[:3]):
+                    if model_name in st.session_state.trainer.trained_models:
+                        with cols[idx]:
+                            model = st.session_state.trainer.trained_models[model_name]
+                            y_pred = model.predict(st.session_state.trainer.X_test)
+                            cm = confusion_matrix(st.session_state.trainer.y_test, y_pred)
+                            fig_cm = px.imshow(cm, text_auto=True, title=model_name)
+                            st.plotly_chart(fig_cm, use_container_width=True)
+        else:
+            st.warning("⚠️ No models trained yet! Please train models first.")
+            if st.button("🚀 Go to Training", use_container_width=True):
+                st.session_state.page = "Train"
+                st.rerun()
+    
     elif page == "Analytics":
-        analytics_page()
+        st.markdown('<h1 class="gradient-text">Analytics Dashboard</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.df is not None:
+            df = st.session_state.df
+            target = st.session_state.target_col
+            
+            if target and target in df.columns:
+                # Distribution
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    fig = px.pie(df, names=target, title="Target Distribution", hole=0.3)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    st.subheader("Statistics")
+                    st.write(f"**Total:** {len(df)}")
+                    st.write(f"**Positive:** {df[target].sum()}")
+                    st.write(f"**Negative:** {len(df) - df[target].sum()}")
+                    st.write(f"**Balance:** {(df[target].sum() / len(df) * 100):.1f}% Positive")
+                
+                # Correlation
+                numeric_df = df.select_dtypes(include=[np.number])
+                if len(numeric_df.columns) > 1:
+                    st.subheader("Correlation Matrix")
+                    corr = numeric_df.corr()
+                    fig = px.imshow(corr, text_auto=True, aspect="auto",
+                                   color_continuous_scale="RdBu")
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Summary
+                st.subheader("Summary Statistics")
+                st.dataframe(df.describe(), use_container_width=True)
+        else:
+            st.info("📊 No dataset loaded. Please upload a dataset first.")
+    
     elif page == "History":
-        history_page()
+        st.markdown('<h1 class="gradient-text">Prediction History</h1>', unsafe_allow_html=True)
+        
+        if "history" in st.session_state and st.session_state.history:
+            df = pd.DataFrame(st.session_state.history)
+            st.dataframe(df, use_container_width=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📥 Export to CSV", use_container_width=True):
+                    csv = df.to_csv(index=False)
+                    b64 = base64.b64encode(csv.encode()).decode()
+                    href = f'<a href="data:file/csv;base64,{b64}" download="history.csv">Download CSV</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+            
+            with col2:
+                if st.button("🗑️ Clear History", use_container_width=True):
+                    st.session_state.history = []
+                    st.rerun()
+        else:
+            st.info("📝 No predictions yet. Make your first prediction!")
+    
     elif page == "Reports":
-        reports_page()
-    elif page == "API":
-        api_page()
+        st.markdown('<h1 class="gradient-text">Generate Reports</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.results is not None:
+            # Report options
+            report_type = st.selectbox("Report Type", ["HTML Report", "CSV Export", "JSON Export"])
+            
+            # Dataset info
+            dataset_info = {
+                'samples': len(st.session_state.df) if st.session_state.df is not None else 0,
+                'features': len(st.session_state.selected_features) if st.session_state.selected_features else 0,
+                'target': st.session_state.target_col if st.session_state.target_col else 'N/A',
+                'positive': st.session_state.df[st.session_state.target_col].sum() if st.session_state.df is not None and st.session_state.target_col else 0,
+                'negative': len(st.session_state.df) - st.session_state.df[st.session_state.target_col].sum() if st.session_state.df is not None and st.session_state.target_col else 0
+            }
+            
+            # Feature importance
+            if st.session_state.feature_importance is not None:
+                feature_imp = st.session_state.feature_importance
+            else:
+                feature_imp = pd.DataFrame({'Feature': st.session_state.selected_features or [], 'Importance': [1/len(st.session_state.selected_features)] * len(st.session_state.selected_features or [])})
+            
+            # Best model
+            best_model = st.session_state.results.iloc[0]["Model"] if len(st.session_state.results) > 0 else "N/A"
+            
+            if st.button("📄 Generate Report", use_container_width=True):
+                with st.spinner("Generating report..."):
+                    report_gen = ReportGenerator()
+                    
+                    if report_type == "HTML Report":
+                        html = report_gen.generate_html_report(
+                            st.session_state.results.drop(columns=['Model Object', 'Accuracy_Score'], errors='ignore'),
+                            dataset_info, feature_imp, best_model, []
+                        )
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;base64,{b64}" download="cardioai_report.html">Download HTML Report</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+                        st.success("Report generated!")
+                    
+                    elif report_type == "CSV Export":
+                        csv = st.session_state.results.drop(columns=['Model Object', 'Accuracy_Score'], errors='ignore').to_csv(index=False)
+                        b64 = base64.b64encode(csv.encode()).decode()
+                        href = f'<a href="data:file/csv;base64,{b64}" download="model_comparison.csv">Download CSV</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+                    
+                    elif report_type == "JSON Export":
+                        json_data = st.session_state.results.drop(columns=['Model Object', 'Accuracy_Score'], errors='ignore').to_json(orient='records', indent=2)
+                        b64 = base64.b64encode(json_data.encode()).decode()
+                        href = f'<a href="data:file/json;base64,{b64}" download="model_comparison.json">Download JSON</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+        else:
+            st.warning("⚠️ No models trained yet! Please train models first.")
+            if st.button("🚀 Go to Training", use_container_width=True):
+                st.session_state.page = "Train"
+                st.rerun()
+    
     elif page == "Settings":
-        settings_page()
+        st.markdown('<h1 class="gradient-text">Settings</h1>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        
+        user_data = db.get_user(st.session_state.user)
+        if user_data:
+            st.write(f"**👤 Name:** {user_data[0]}")
+            st.write(f"**📧 Email:** {user_data[1]}")
+            st.write(f"**🔑 Total Logins:** {user_data[2]}")
+        
+        st.markdown("---")
+        
+        st.subheader("System Information")
+        st.write("**Version:** 4.0 Pro")
+        st.write("**Models:** 5 Advanced ML Models")
+        st.write("**Feature Selection:** Auto + 4 Methods")
+        st.write("**Reports:** HTML, CSV, JSON")
+        
+        st.markdown("---")
+        
+        st.subheader("Feature Selection Methods")
+        st.markdown("""
+        - **Correlation:** Selects features highly correlated with target
+        - **Mutual Information:** Measures mutual dependence between features and target
+        - **Random Forest:** Uses feature importance from Random Forest
+        - **RFE:** Recursive Feature Elimination
+        - **Auto:** Combines all methods for best results
+        """)
+        
+        st.markdown("---")
+        
+        if st.button("🔄 Reset All Data", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    main()
+# ---------------------------
+# RUN APP
+# ---------------------------
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+if not st.session_state.auth:
+    login_page()
+else:
+    main_app()
     
