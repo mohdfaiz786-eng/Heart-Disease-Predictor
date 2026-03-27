@@ -258,24 +258,25 @@ def load_css():
                 min-height: 44px !important;
             }
             
-            /* Make sidebar visible on mobile as slide-out */
+            /* Sidebar - visible as overlay */
             [data-testid="stSidebar"] {
                 position: fixed !important;
-                left: -280px !important;
                 top: 0 !important;
-                height: 100% !important;
+                left: -280px !important;
                 width: 280px !important;
+                height: 100% !important;
                 z-index: 1001 !important;
                 transition: left 0.3s ease !important;
+                background: linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%) !important;
                 display: block !important;
             }
             
-            /* Show sidebar when open */
+            /* When sidebar is open */
             [data-testid="stSidebar"][aria-expanded="true"] {
                 left: 0 !important;
             }
             
-            /* Sidebar collapse button */
+            /* Hamburger menu button */
             button[kind="header"] {
                 position: fixed !important;
                 left: 10px !important;
@@ -283,21 +284,26 @@ def load_css():
                 z-index: 1002 !important;
                 background: #3b82f6 !important;
                 border-radius: 50% !important;
-                width: 40px !important;
-                height: 40px !important;
+                width: 44px !important;
+                height: 44px !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                font-size: 0 !important;
+                border: none !important;
+                cursor: pointer !important;
             }
             
             button[kind="header"]::before {
                 content: "☰" !important;
-                font-size: 20px !important;
+                font-size: 24px !important;
                 color: white !important;
             }
             
-            /* Hide bottom nav - not needed now */
+            button[kind="header"] span {
+                display: none !important;
+            }
+            
+            /* Hide bottom nav */
             .bottom-nav {
                 display: none !important;
             }
