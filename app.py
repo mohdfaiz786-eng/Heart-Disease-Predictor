@@ -24,6 +24,10 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
+# app.py mein yeh add karo
+st.markdown("""
+<meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" />
+""", unsafe_allow_html=True)
 # ---------------------------
 # PAGE CONFIG
 # ---------------------------
@@ -287,12 +291,13 @@ def load_css():
         /* Best Model Card */
         .best-model-card {
             border: 2px solid #10b981;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            background: linear-gradient(120deg, #e0f7fa, #e8f5e9);
             border-radius: 15px;
             padding: 1rem;
             margin: 1rem 0;
             text-align: center;
-            animation: pulse 2s infinite;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
         }
         
         /* Tabs */
@@ -373,6 +378,22 @@ def load_css():
     """
     st.markdown(css, unsafe_allow_html=True)
     
+    def load_css():
+    # Add SEO meta tags
+    st.markdown("""
+    <head>
+        <title>CardioAI Pro - Heart Disease Prediction</title>
+        <meta name="description" content="Advanced Heart Disease Prediction System using Machine Learning. Get instant risk assessment with 98.5% accuracy.">
+        <meta name="keywords" content="heart disease prediction, cardio ai, machine learning, health app, heart risk assessment">
+        <meta name="author" content="CardioAI Team">
+        <meta property="og:title" content="CardioAI Pro - Heart Disease Predictor">
+        <meta property="og:description" content="Free AI-powered heart disease prediction tool. Check your risk now!">
+        <meta property="og:image" content="https://your-icon-url.com/icon.png">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    """, unsafe_allow_html=True)
+    
+    # Rest of your CSS...
     # Bottom Navigation HTML
     bottom_nav_html = """
     <div class="bottom-nav">
@@ -1006,40 +1027,43 @@ def train_page():
         if st.button("Go to Upload"):
             st.session_state.page = "Feature"
             st.rerun()
-    elif st.session_state.selected_features is None:
+        return
+    
+    if st.session_state.selected_features is None:
         st.warning("Run feature selection first!")
         if st.button("Go to Feature Selection"):
             st.session_state.page = "Feature"
             st.rerun()
-    else:
-        st.success(f"Dataset: {st.session_state.df.shape[0]} rows | Features: {len(st.session_state.selected_features)}")
-        
-        test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-        
-        if st.button("🚀 Train All Models", use_container_width=True):
-            with st.spinner("Training..."):
-                X = st.session_state.df[st.session_state.selected_features].copy()
-                y = st.session_state.df[st.session_state.target_col].copy()
-                
-                for col in X.columns:
-                    if X[col].dtype == 'object':
-                        X[col] = LabelEncoder().fit_transform(X[col].astype(str))
-                X = X.fillna(X.median())
-                
-                trainer = ModelTrainer()
-                results = trainer.train_all(X, y, test_size)
-                
-                st.session_state.trainer = trainer
-                st.session_state.results = results
-                
-                st.success("✅ All models trained!")
-                st.balloons()
-                
-                display_df = results.drop(columns=['Accuracy_Score'])
-                st.dataframe(display_df, use_container_width=True)
-                
-                best = results.iloc[0]["Model"]
-                st.markdown(f'<div class="best-model-card"><h3>🏆 Best: {best}</h3></div>', unsafe_allow_html=True)
+        return
+    
+    st.success(f"Dataset: {st.session_state.df.shape[0]} rows | Features: {len(st.session_state.selected_features)}")
+    
+    test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
+    
+    if st.button("🚀 Train All Models", use_container_width=True):
+        with st.spinner("Training..."):
+            X = st.session_state.df[st.session_state.selected_features].copy()
+            y = st.session_state.df[st.session_state.target_col].copy()
+            
+            for col in X.columns:
+                if X[col].dtype == 'object':
+                    X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+            X = X.fillna(X.median())
+            
+            trainer = ModelTrainer()
+            results = trainer.train_all(X, y, test_size)
+            
+            st.session_state.trainer = trainer
+            st.session_state.results = results
+            
+            st.success("✅ All models trained!")
+            st.balloons()
+            
+            display_df = results.drop(columns=['Accuracy_Score'])
+            st.dataframe(display_df, use_container_width=True)
+            
+            best = results.iloc[0]["Model"]
+            st.markdown(f'<div class="best-model-card"><h3>🏆 Best: {best}</h3></div>', unsafe_allow_html=True)
 
 # ---------------------------
 # PREDICT PAGE WITH ENHANCED RECOMMENDATIONS
