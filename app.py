@@ -24,10 +24,7 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-# app.py mein yeh add karo
-st.markdown("""
-<meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" />
-""", unsafe_allow_html=True)
+
 # ---------------------------
 # PAGE CONFIG
 # ---------------------------
@@ -380,7 +377,7 @@ def load_css():
     
     def load_css():
     # Add SEO meta tags
-    st.markdown("""
+       st.markdown("""
     <head>
         <title>CardioAI Pro - Heart Disease Prediction</title>
         <meta name="description" content="Advanced Heart Disease Prediction System using Machine Learning. Get instant risk assessment with 98.5% accuracy.">
